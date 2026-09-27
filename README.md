@@ -76,3 +76,13 @@ docs/            测试、接口、人工审查和AI开发说明
 源码在 `codex/sprint1` 功能分支上开发并保存AI提交。没有把AI自检写成人工审批，也没有自动合入主干。团队须按 `docs/人工审查与验收清单.md` 审查diff、运行和逐条验收后，由实际审查者填写记录并决定合入。自动测试通过仅证明列明的场景，不代表本轮会议已经举行或DoD中的人工审查已完成。
 
 本次AI实际开发过程见 `docs/AI开发过程记录.md`；完整原始互动应同时保留本任务会话，过程摘要不能替代原件。
+
+## 源码包与Git历史
+
+提交包 `第15组_Sprint1源代码.zip` 包含源码、测试、说明、截图证据，以及 `Sprint1-history.bundle`。直接解压即可运行，不依赖Git。若要恢复提交历史，解压后在其他空目录的父目录执行：
+
+```powershell
+git clone -b codex/sprint1 Sprint1-history.bundle sprint1-review
+```
+
+该操作会创建新的 `sprint1-review` 目录。之后在其中 `git log --oneline`、`git show <提交号>` 审查变更。bundle保留功能分支真实历史；会议材料属于单独交付，不混入本源码包。
