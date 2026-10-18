@@ -30,7 +30,9 @@ try:
             time.sleep(.1)
     else:
         raise RuntimeError('Test server did not become ready')
-    for filename in ['browser_campus.cjs','browser_polish.cjs','browser_workspace.cjs','browser_guest.cjs']:
+    files=sys.argv[1:] or ['browser_campus.cjs','browser_polish.cjs','browser_workspace.cjs','browser_guest.cjs','browser_finish.cjs']
+    for filename in files:
+        assert filename in ['browser_campus.cjs','browser_polish.cjs','browser_workspace.cjs','browser_guest.cjs','browser_finish.cjs']
         subprocess.run([node,str(ROOT/'tests'/filename)],cwd=ROOT,env=env,check=True)
     print('Browser suite passed; isolated database: '+str(database))
 finally:

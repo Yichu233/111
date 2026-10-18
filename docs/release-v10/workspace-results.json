@@ -1,0 +1,15 @@
+{
+  "passed": 9,
+  "checks": [
+    "entry portal uses explicit scene identity and opens each matching workspace",
+    "favorites and display preferences persist across reload and remain user scoped",
+    "course switcher keeps scope and source context",
+    "material editing creates a visible revision and preserves the old version",
+    "activity read state is persistent and does not complete business tasks",
+    "integrated public catalog filters paginates and traces sources without leaving shell",
+    "team directory reflects visible assignments and help points to working modules",
+    "logout protects unsaved observation and actually invalidates the session",
+    "portal and every new module fit desktop sizes with keyboard-visible controls"
+  ],
+  "errors": []
+}
