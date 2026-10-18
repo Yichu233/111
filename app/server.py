@@ -14,7 +14,7 @@ import sqlite3
 from .domain import APIError, list_offerings, list_resources, offering_for, offering_view, record_source, resource_content, supervision
 
 STATIC = Path(__file__).resolve().parent / "static"
-STATIC_ROUTES = {"/": ("index.html", "text/html"), "/app.js": ("app.js", "text/javascript"), "/styles.css": ("styles.css", "text/css")}
+STATIC_ROUTES = {"/": ("index.html", "text/html"), "/app.js": ("app.js", "text/javascript"), "/public.js": ("public.js", "text/javascript"), "/public.css": ("public.css", "text/css"), "/styles.css": ("styles.css", "text/css")}
 
 
 class AppServer(ThreadingHTTPServer):
@@ -87,6 +87,8 @@ class Handler(BaseHTTPRequestHandler):
             if path in STATIC_ROUTES:
                 name, mime = STATIC_ROUTES[path]
                 return self.reply(200, (STATIC / name).read_bytes(), mime)
+            if path == "/api/public-catalog":
+                return self.reply(200, json.loads((STATIC.parent / "public_catalog.json").read_text(encoding="utf-8")))
             if path == "/api/bootstrap":
                 try:
                     user = self.current_user(store)
@@ -179,7 +181,7 @@ def main():
         server = AppServer((args.host, args.port), database=args.database)
     except StorageError as error:
         parser.exit(1, str(error) + "\n")
-    print(f"爱教学已启动：http://{args.host}:{server.server_port} （Ctrl+C停止；所有身份和数据均为模拟）", flush=True)
+    print(f"爱教学已启动：http://{args.host}:{server.server_port} （Ctrl+C停止；公开课程资料工作空间）", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
