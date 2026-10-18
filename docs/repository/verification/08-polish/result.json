@@ -1,0 +1,9 @@
+{
+  "executed_at": "2026-10-19T00:52:06+08:00",
+  "scope": "Retained snapshot rechecked now; not a claim about its historical test execution.",
+  "python_syntax_files": 13,
+  "javascript_syntax_files": 3,
+  "unit_test_exit_code": 0,
+  "unit_tests": 46,
+  "duration_seconds": 10.33
+}
