@@ -93,3 +93,13 @@ python tests/run_browser_suite.py
 - 身份切换失败时清理旧身份页面；会话失效提供恢复入口；保存中限制重复操作。偏好读取失败可恢复默认显示。
 
 源码包保留交付时的两份SQLite数据库快照。首次查看前可自行另存备份；删除数据库会失去已有操作记录，不建议为演示而清空。公开课程资料是公开事实，任课、课表、人数与业务记录是独立教学场景。
+
+## 仓库、测试依赖与交付验证
+
+当前仓库保留原始Sprint 1的两条Git提交；后续归档版本使用当前时间导入。阅读 [版本管理说明](docs/repository/版本管理说明.md) 和 [版本演进索引](docs/repository/版本演进索引.md)。`codex/sprint1-quality` 为当前质量收尾分支，自动检查不代替人工diff审核。
+
+应用运行仅需Python 3.11或以上和内置SQLite。Node.js仅用于浏览器检查，建议使用仍受支持的LTS版本；另需安装Microsoft Edge和Playwright。在项目目录运行 `npm install --no-save --package-lock=false playwright` 安装浏览器测试依赖后执行 `python tests/run_browser_suite.py`。本机已验证的工具版本见下方验证记录，其他环境按实际安装情况复验。浏览器检查使用临时测试数据，不访问学校系统。
+
+`python tests/check_release.py` 会使用随机端口和临时数据库验证当前源码入口及实际引用的JS/CSS；`python tests/check_release.py --archive 路径/源码.zip` 会先解压再验证。两种模式均不打开已有场景数据库，也不提交业务表单。
+
+业务数据在 `var` 下，由Git忽略；已有业务快照随最终ZIP另行保留。复制、运行和审核应使用本仓库约定的同一候选提交，避免把运行后变化的数据库误当作代码差异。

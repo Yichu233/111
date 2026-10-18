@@ -11,3 +11,5 @@ var/
 *.sqlite3-shm
 *.bundle
 .DS_Store
+package-lock.json
+npm-debug.log*
