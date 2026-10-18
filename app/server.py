@@ -11,10 +11,11 @@ from urllib.parse import parse_qs, urlsplit
 
 from .storage import Repository, DEFAULT_DATABASE, StorageError
 import sqlite3
+from . import campus
 from .domain import APIError, list_offerings, list_resources, offering_for, offering_view, record_source, resource_content, supervision
 
 STATIC = Path(__file__).resolve().parent / "static"
-STATIC_ROUTES = {"/": ("index.html", "text/html"), "/app.js": ("app.js", "text/javascript"), "/public.js": ("public.js", "text/javascript"), "/public.css": ("public.css", "text/css"), "/styles.css": ("styles.css", "text/css")}
+STATIC_ROUTES = {"/public": ("public.html", "text/html"), "/campus.js": ("campus.js", "text/javascript"), "/campus.css": ("campus.css", "text/css"), "/": ("index.html", "text/html"), "/app.js": ("app.js", "text/javascript"), "/public.js": ("public.js", "text/javascript"), "/public.css": ("public.css", "text/css"), "/styles.css": ("styles.css", "text/css")}
 
 
 class AppServer(ThreadingHTTPServer):
@@ -25,6 +26,8 @@ class AppServer(ThreadingHTTPServer):
         self.repository = repository or Repository(database)
         super().__init__(address, Handler)
         self.sessions = {}
+        self.campus_sessions = {}
+        self.campus_database = Path(database).parent / "campus.sqlite3"
         self.session_lock = threading.Lock()
 
 
@@ -84,6 +87,8 @@ class Handler(BaseHTTPRequestHandler):
         try:
             parsed = urlsplit(self.path)
             path, query = parsed.path, parse_qs(parsed.query, keep_blank_values=True)
+            if path.startswith("/api/campus/"):
+                return campus.get(self,path)
             if path in STATIC_ROUTES:
                 name, mime = STATIC_ROUTES[path]
                 return self.reply(200, (STATIC / name).read_bytes(), mime)
@@ -131,6 +136,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def post_response(self, store):
         try:
+            if self.path.startswith("/api/campus/"):
+                return campus.post(self,self.path)
             if self.path != "/api/demo-session":
                 raise APIError(404, "not_found", "接口不存在。")
             # 同源JSON写入，仅用于选择公开的模拟身份；不是生产登录或学校认证。
