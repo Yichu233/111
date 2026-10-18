@@ -3,7 +3,7 @@ const assert=require('node:assert/strict'),fs=require('fs');
 (async()=>{
  const browser=await chromium.launch({headless:true,channel:'msedge'}),page=await browser.newPage({viewport:{width:1440,height:1000}}),base=process.env.AIJIAOXUE_BASE_URL||'http://127.0.0.1:18772',checks=[],errors=[];
  page.setDefaultTimeout(9000);page.on('pageerror',e=>errors.push(e.message));
- async function ready(){await page.waitForFunction(()=>document.querySelector('#page').getAttribute('aria-busy')==='false'&&!document.querySelector('#identity').disabled);}
+ async function ready(){await page.waitForFunction(()=>document.querySelector('#page').getAttribute('aria-busy')==='false');if(await page.locator('.portal-entry').count()){await page.getByRole('button',{name:'进入教学工作空间',exact:true}).click();await page.locator('.teacher-layout').waitFor();}await page.waitForFunction(()=>!document.querySelector('#identity').disabled);}
  async function go(route){await page.goto(base+'/#/'+route);await ready();}
  async function role(id){await page.selectOption('#identity',id);await ready();}
  async function test(name,work){await work();checks.push(name);console.log('PASS '+name);}

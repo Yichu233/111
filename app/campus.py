@@ -47,6 +47,7 @@ def seed():
 def connection(server):
  path=Path(server.campus_database);path.parent.mkdir(parents=True,exist_ok=True)
  c=sqlite3.connect(path,timeout=10);c.execute('CREATE TABLE IF NOT EXISTS campus_state (id INTEGER PRIMARY KEY CHECK(id=1), version INTEGER NOT NULL, payload TEXT NOT NULL)')
+ c.execute('CREATE TABLE IF NOT EXISTS campus_preferences (user_id TEXT PRIMARY KEY, payload TEXT NOT NULL)')
  if not c.execute('SELECT 1 FROM campus_state WHERE id=1').fetchone():
   c.execute('INSERT OR IGNORE INTO campus_state VALUES(1,1,?)',(json.dumps(seed(),ensure_ascii=False),))
  c.commit()
@@ -75,14 +76,19 @@ def visible(data,user):
  for t in d['tasks']:
   if user['role']!='supervisor' and t['status']!='submitted':t['report']={}
  d['followups']=[f for f in d['followups'] if f['course_id'] in ids]
- d['audit']=[a for a in d['audit'] if a['course_id'] in ids][-20:]
+ d['audit']=[a for a in d['audit'] if a['course_id'] in ids and (a['action']!='保存听课草稿' or a['actor']==user['name'])][-100:]
  return d
+def preferences(server,user):
+ with connection(server) as c:row=c.execute('SELECT payload FROM campus_preferences WHERE user_id=?',(user['id'],)).fetchone()
+ return json.loads(row[0]) if row else {'density':'comfortable','landing':'home','pinned':[],'read_events':[]}
 def get(h,path):
  if path=='/api/campus/bootstrap':
   try:u=account(h)
   except APIError:u=None
   h.reply(200,{'users':USERS,'user':u,'mode':'scenario'});return
  u=account(h)
+ if path=='/api/campus/preferences':
+  h.reply(200,preferences(h.server,u));return
  if path!='/api/campus/state':raise APIError(404,'not_found','接口不存在。')
  version,data=read(h.server);h.reply(200,{'version':version,'user':u,'users':USERS,'data':visible(data,u)})
 def text(p,k,minimum=1,maximum=2000):
@@ -112,6 +118,29 @@ def post(h,path):
    if len(h.server.campus_sessions)>=512:h.server.campus_sessions.pop(next(iter(h.server.campus_sessions)))
    h.server.campus_sessions[token]=(u['id'],now+14400)
   h.reply(200,{'user':u},cookie=f'campus_session={token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=14400');return
+ if path=='/api/campus/logout':
+  cookies=SimpleCookie()
+  try:cookies.load(h.headers.get('Cookie',''))
+  except Exception:pass
+  token=cookies.get('campus_session')
+  with h.server.session_lock:h.server.campus_sessions.pop(token.value if token else '',None)
+  h.reply(200,{'signed_out':True},cookie='campus_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0');return
+ if path=='/api/campus/preferences':
+  u=account(h)
+  if set(p)-{'density','landing','pinned','read_events'}:raise APIError(400,'invalid_preference','包含不支持的设置。')
+  if 'density' in p and p['density'] not in ['comfortable','compact']:raise APIError(400,'invalid_preference','显示密度无效。')
+  if 'landing' in p and p['landing'] not in ['home','inbox','courses','calendar']:raise APIError(400,'invalid_preference','默认页面无效。')
+  _,data=read(h.server);allowed={x['id'] for x in visible(data,u)['courses']}
+  if 'pinned' in p and (not isinstance(p['pinned'],list) or len(p['pinned'])>20 or any(not isinstance(x,str) or x not in allowed for x in p['pinned'])):raise APIError(400,'invalid_preference','只能收藏当前身份可见的课程。')
+  audit_ids={a['id'] for a in visible(data,u)['audit']}
+  if 'read_events' in p and (not isinstance(p['read_events'],list) or len(p['read_events'])>100 or any(not isinstance(x,str) or x not in audit_ids for x in p['read_events'])):raise APIError(400,'invalid_preference','动态读取标记无效。')
+  with connection(h.server) as c:
+   c.execute('BEGIN IMMEDIATE');row=c.execute('SELECT payload FROM campus_preferences WHERE user_id=?',(u['id'],)).fetchone()
+   current=json.loads(row[0]) if row else {'density':'comfortable','landing':'home','pinned':[],'read_events':[]}
+   current.update(p)
+   for k in ['pinned','read_events']:current[k]=list(dict.fromkeys(current[k]))
+   c.execute('INSERT INTO campus_preferences(user_id,payload) VALUES(?,?) ON CONFLICT(user_id) DO UPDATE SET payload=excluded.payload',(u['id'],json.dumps(current,ensure_ascii=False)))
+  h.reply(200,current);return
  if path!='/api/campus/action':raise APIError(404,'not_found','接口不存在。')
  u=account(h)
  with connection(h.server) as c:
@@ -130,6 +159,15 @@ def post(h,path):
    kind=p.get('kind')
    if kind not in ['教学大纲','课前材料','课堂练习']:raise APIError(400,'invalid_kind','资料类型无效。')
    d['resources'].append({'id':'RS-'+secrets.token_hex(5),'course_id':cid,'title':text(p,'title',2,80),'kind':kind,'body':text(p,'body',20,12000),'created':ASOF,'author':u['id']});label='发布课程资料'
+  elif action=='resource_update':
+   if not teacher:raise APIError(403,'forbidden','只有本课教师可修改资料。')
+   resource=next((r for r in d['resources'] if r['id']==p.get('resource_id') and r['course_id']==cid),None)
+   if not resource:raise APIError(404,'resource_missing','资料不存在或不属于此开课。')
+   title=text(p,'title',2,80);body=text(p,'body',20,12000)
+   if title==resource['title'] and body==resource['body']:raise APIError(400,'unchanged','资料内容未发生变化。')
+   resource.setdefault('history',[]).append({k:resource.get(k) for k in ['title','body','author','created','updated','revision']})
+   resource.update(title=title,body=body,author=u['id'],revision=resource.get('revision',1)+1,updated=datetime.now(timezone(timedelta(hours=8))).isoformat(timespec='seconds'))
+   label='更新课程资料'
   elif action=='observation_create':
    if u['role']!='director':raise APIError(403,'forbidden','只有主任可安排听课。')
    dt=text(p,'date',10,10)
