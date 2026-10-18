@@ -1,0 +1,254 @@
+test_followup_lifecycle_requires_teacher_then_director (test_campus.CampusTests.test_followup_lifecycle_requires_teacher_then_director) ... 127.0.0.1 - - [19/Oct/2026 00:52:19] "POST /api/campus/session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:19] "POST /api/campus/session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:19] "POST /api/campus/session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:19] "GET /api/campus/state HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:19] "POST /api/campus/action HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:19] "GET /api/campus/state HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:19] "POST /api/campus/action HTTP/1.1" 409 -
+127.0.0.1 - - [19/Oct/2026 00:52:19] "GET /api/campus/state HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:19] "POST /api/campus/action HTTP/1.1" 403 -
+127.0.0.1 - - [19/Oct/2026 00:52:19] "GET /api/campus/state HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:20] "POST /api/campus/action HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:20] "GET /api/campus/state HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:20] "POST /api/campus/action HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:20] "GET /api/campus/state HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:20] "POST /api/campus/action HTTP/1.1" 409 -
+ok
+test_input_validation_and_atomic_failure (test_campus.CampusTests.test_input_validation_and_atomic_failure) ... 127.0.0.1 - - [19/Oct/2026 00:52:21] "POST /api/campus/session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:21] "GET /api/campus/state HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:21] "GET /api/campus/state HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:21] "POST /api/campus/action HTTP/1.1" 400 -
+127.0.0.1 - - [19/Oct/2026 00:52:21] "GET /api/campus/state HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:21] "GET /api/campus/state HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:21] "POST /api/campus/action HTTP/1.1" 400 -
+ok
+test_observation_draft_submit_visibility_and_future_guard (test_campus.CampusTests.test_observation_draft_submit_visibility_and_future_guard) ... 127.0.0.1 - - [19/Oct/2026 00:52:22] "POST /api/campus/session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:22] "POST /api/campus/session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:22] "GET /api/campus/state HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:22] "POST /api/campus/action HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:22] "GET /api/campus/state HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:22] "GET /api/campus/state HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:22] "POST /api/campus/action HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:22] "GET /api/campus/state HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:22] "GET /api/campus/state HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:22] "POST /api/campus/action HTTP/1.1" 409 -
+127.0.0.1 - - [19/Oct/2026 00:52:22] "GET /api/campus/state HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:22] "POST /api/campus/action HTTP/1.1" 400 -
+ok
+test_role_permissions_and_optimistic_concurrency (test_campus.CampusTests.test_role_permissions_and_optimistic_concurrency) ... 127.0.0.1 - - [19/Oct/2026 00:52:22] "POST /api/campus/session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:22] "GET /api/campus/state HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:22] "POST /api/campus/action HTTP/1.1" 403 -
+127.0.0.1 - - [19/Oct/2026 00:52:22] "POST /api/campus/session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:22] "GET /api/campus/state HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:22] "GET /api/campus/state HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:22] "POST /api/campus/action HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:22] "POST /api/campus/action HTTP/1.1" 409 -
+ok
+test_scheduling_date_duplicate_and_observer_collision (test_campus.CampusTests.test_scheduling_date_duplicate_and_observer_collision) ... 127.0.0.1 - - [19/Oct/2026 00:52:23] "POST /api/campus/session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:23] "GET /api/campus/state HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:23] "POST /api/campus/action HTTP/1.1" 400 -
+127.0.0.1 - - [19/Oct/2026 00:52:23] "GET /api/campus/state HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:23] "POST /api/campus/action HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:23] "GET /api/campus/state HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:23] "POST /api/campus/action HTTP/1.1" 409 -
+127.0.0.1 - - [19/Oct/2026 00:52:23] "POST /api/campus/session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:23] "GET /api/campus/state HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:23] "POST /api/campus/action HTTP/1.1" 403 -
+ok
+test_sessions_and_teacher_scope (test_campus.CampusTests.test_sessions_and_teacher_scope) ... 127.0.0.1 - - [19/Oct/2026 00:52:24] "GET /api/campus/state HTTP/1.1" 401 -
+127.0.0.1 - - [19/Oct/2026 00:52:24] "POST /api/campus/session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:24] "GET /api/campus/state HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:24] "GET /api/campus/state HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:24] "POST /api/campus/action HTTP/1.1" 403 -
+ok
+test_source_separation_and_relational_integrity (test_campus.CampusTests.test_source_separation_and_relational_integrity) ... ok
+test_teacher_resource_and_preparation_persist (test_campus.CampusTests.test_teacher_resource_and_preparation_persist) ... 127.0.0.1 - - [19/Oct/2026 00:52:25] "POST /api/campus/session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:26] "GET /api/campus/state HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:26] "POST /api/campus/action HTTP/1.1" 400 -
+127.0.0.1 - - [19/Oct/2026 00:52:26] "GET /api/campus/state HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:26] "POST /api/campus/action HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:26] "GET /api/campus/state HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:26] "POST /api/campus/action HTTP/1.1" 200 -
+ok
+test_all_online_records_are_in_2018_section_and_links_are_exact_matches (test_public_data.PublicDataTests.test_all_online_records_are_in_2018_section_and_links_are_exact_matches) ... ok
+test_every_course_field_matches_original_row (test_public_data.PublicDataTests.test_every_course_field_matches_original_row) ... ok
+test_snapshots_match_manifest_hashes (test_public_data.PublicDataTests.test_snapshots_match_manifest_hashes) ... ok
+test_real_http_restart_returns_preserved_database_text (test_sprint1.RestartTests.test_real_http_restart_returns_preserved_database_text) ... 127.0.0.1 - - [19/Oct/2026 00:52:27] "POST /api/demo-session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:27] "GET /api/offerings/K01 HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:27] "POST /api/demo-session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:27] "GET /api/offerings/K01 HTTP/1.1" 200 -
+ok
+test_input_validation_and_cross_site_switch (test_sprint1.Sprint1Tests.test_input_validation_and_cross_site_switch) ... 127.0.0.1 - - [19/Oct/2026 00:52:28] "POST /api/demo-session HTTP/1.1" 400 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "POST /api/demo-session HTTP/1.1" 400 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "POST /api/demo-session HTTP/1.1" 400 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "POST /api/demo-session HTTP/1.1" 415 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "POST /api/demo-session HTTP/1.1" 403 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "POST /api/demo-session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/offerings HTTP/1.1" 400 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/offerings?term_id=no-term HTTP/1.1" 400 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/offerings?term_id=2026-fall&term_id=2026-spring HTTP/1.1" 400 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/resources/R01/content HTTP/1.1" 400 -
+ok
+test_missing_session_user_returns_401 (test_sprint1.Sprint1Tests.test_missing_session_user_returns_401) ... 127.0.0.1 - - [19/Oct/2026 00:52:28] "POST /api/demo-session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/offerings/K01 HTTP/1.1" 401 -
+ok
+test_sessions_untrusted_query_and_expiry (test_sprint1.Sprint1Tests.test_sessions_untrusted_query_and_expiry) ... 127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/offerings?term_id=2026-fall HTTP/1.1" 401 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/offerings/K01 HTTP/1.1" 401 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "POST /api/demo-session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/offerings?term_id=2026-fall&user_id=director HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/offerings/K01 HTTP/1.1" 401 -
+ok
+test_static_assets_and_no_private_files (test_sprint1.Sprint1Tests.test_static_assets_and_no_private_files) ... 127.0.0.1 - - [19/Oct/2026 00:52:28] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /app.js HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /styles.css HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "POST /api/demo-session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /../data.py HTTP/1.1" 404 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /%2e%2e/app/data.py HTTP/1.1" 404 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /.git/config HTTP/1.1" 404 -
+ok
+test_supervision_permissions_and_department_boundary (test_sprint1.Sprint1Tests.test_supervision_permissions_and_department_boundary) ... 127.0.0.1 - - [19/Oct/2026 00:52:28] "POST /api/demo-session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/offerings/K01/supervision HTTP/1.1" 403 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/records/D01/source?offering_id=K01 HTTP/1.1" 403 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "POST /api/demo-session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/offerings/K99 HTTP/1.1" 404 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/offerings/K99/resources HTTP/1.1" 404 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/offerings/K99/supervision HTTP/1.1" 404 -
+ok
+test_switch_invalidates_previous_session (test_sprint1.Sprint1Tests.test_switch_invalidates_previous_session) ... 127.0.0.1 - - [19/Oct/2026 00:52:28] "POST /api/demo-session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "POST /api/demo-session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/offerings/K01 HTTP/1.1" 401 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/offerings?term_id=2026-fall HTTP/1.1" 200 -
+ok
+test_us011_term_isolation_and_joint_teaching_deduplication (test_sprint1.Sprint1Tests.test_us011_term_isolation_and_joint_teaching_deduplication) ... 127.0.0.1 - - [19/Oct/2026 00:52:28] "POST /api/demo-session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/offerings?term_id=2026-fall HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/offerings?term_id=2026-spring HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/offerings?term_id=2027-spring HTTP/1.1" 200 -
+ok
+test_us014_teacher_membership_and_direct_object_access (test_sprint1.Sprint1Tests.test_us014_teacher_membership_and_direct_object_access) ... 127.0.0.1 - - [19/Oct/2026 00:52:28] "POST /api/demo-session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/offerings?term_id=2026-fall HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/offerings/K03 HTTP/1.1" 404 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/offerings/K03/resources HTTP/1.1" 404 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/offerings/K03/supervision HTTP/1.1" 404 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "POST /api/demo-session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/offerings?term_id=2026-fall HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "POST /api/demo-session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/offerings?term_id=2026-fall HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/offerings/K01 HTTP/1.1" 404 -
+ok
+test_us021_course_fields_and_missing_description (test_sprint1.Sprint1Tests.test_us021_course_fields_and_missing_description) ... 127.0.0.1 - - [19/Oct/2026 00:52:28] "POST /api/demo-session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/offerings/K01 HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/offerings/K03 HTTP/1.1" 200 -
+ok
+test_us022_offering_context_and_invalid_relationship (test_sprint1.Sprint1Tests.test_us022_offering_context_and_invalid_relationship) ... 127.0.0.1 - - [19/Oct/2026 00:52:28] "POST /api/demo-session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/offerings/K01?course_id=C01 HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/offerings/K02?course_id=C01 HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/offerings/K01?course_id=C02 HTTP/1.1" 400 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/offerings/missing HTTP/1.1" 404 -
+ok
+test_us051_shared_and_offering_specific_resources (test_sprint1.Sprint1Tests.test_us051_shared_and_offering_specific_resources) ... 127.0.0.1 - - [19/Oct/2026 00:52:28] "POST /api/demo-session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/offerings/K01/resources HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/offerings/K02/resources HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "POST /api/demo-session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/offerings/K04/resources HTTP/1.1" 200 -
+ok
+test_us052_source_missing_and_no_invented_entry (test_sprint1.Sprint1Tests.test_us052_source_missing_and_no_invented_entry) ... 127.0.0.1 - - [19/Oct/2026 00:52:28] "POST /api/demo-session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/offerings/K01/resources HTTP/1.1" 200 -
+ok
+test_us072_permission_not_only_hidden_button (test_sprint1.Sprint1Tests.test_us072_permission_not_only_hidden_button) ... 127.0.0.1 - - [19/Oct/2026 00:52:28] "POST /api/demo-session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/resources/R06/content?offering_id=K01 HTTP/1.1" 403 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/resources/R02/content?offering_id=K02 HTTP/1.1" 404 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /app/fixtures/restricted.txt HTTP/1.1" 404 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /fixtures/restricted.txt HTTP/1.1" 404 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "POST /api/demo-session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/resources/R06/content?offering_id=K01 HTTP/1.1" 200 -
+ok
+test_us072_real_content_and_distinct_errors (test_sprint1.Sprint1Tests.test_us072_real_content_and_distinct_errors) ... 127.0.0.1 - - [19/Oct/2026 00:52:28] "POST /api/demo-session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/resources/R02/content?offering_id=K01 HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/resources/R04/content?offering_id=K01 HTTP/1.1" 404 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/resources/R05/content?offering_id=K01 HTTP/1.1" 404 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/resources/R06/content?offering_id=K01 HTTP/1.1" 403 -
+ok
+test_us091_missing_records_preserve_unknown (test_sprint1.Sprint1Tests.test_us091_missing_records_preserve_unknown) ... 127.0.0.1 - - [19/Oct/2026 00:52:28] "POST /api/demo-session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/offerings/K04/supervision HTTP/1.1" 200 -
+ok
+test_us091_records_sources_and_context (test_sprint1.Sprint1Tests.test_us091_records_sources_and_context) ... 127.0.0.1 - - [19/Oct/2026 00:52:28] "POST /api/demo-session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/offerings/K01/supervision HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/records/D01/source?offering_id=K01 HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/records/D01/source?offering_id=K02 HTTP/1.1" 404 -
+127.0.0.1 - - [19/Oct/2026 00:52:28] "GET /api/offerings/K02/supervision HTTP/1.1" 200 -
+ok
+test_all_seed_values_and_unknowns_survive_normalization (test_storage.StorageTests.test_all_seed_values_and_unknowns_survive_normalization) ... ok
+test_assignment_requires_teacher_on_insert_update_and_role_change (test_storage.StorageTests.test_assignment_requires_teacher_on_insert_update_and_role_change) ... ok
+test_assignment_unique_and_orphan_rules (test_storage.StorageTests.test_assignment_unique_and_orphan_rules) ... ok
+test_changed_schema_is_rejected_without_silent_repair (test_storage.StorageTests.test_changed_schema_is_rejected_without_silent_repair) ... ok
+test_controlled_file_paths_and_permission_before_existence (test_storage.StorageTests.test_controlled_file_paths_and_permission_before_existence) ... ok
+test_cross_course_resource_rejected_shared_and_matching_accepted (test_storage.StorageTests.test_cross_course_resource_rejected_shared_and_matching_accepted) ... ok
+test_deleted_session_user_is_detected_by_repository (test_storage.StorageTests.test_deleted_session_user_is_detected_by_repository) ... ok
+test_existing_empty_or_corrupt_database_is_not_seeded (test_storage.StorageTests.test_existing_empty_or_corrupt_database_is_not_seeded) ... ok
+test_missing_record_source_and_file_read_failure_are_expected_errors (test_storage.StorageTests.test_missing_record_source_and_file_read_failure_are_expected_errors) ... ok
+test_orphan_offering_course_and_term_rejected (test_storage.StorageTests.test_orphan_offering_course_and_term_rejected) ... ok
+test_orphan_resource_rejected_even_when_shared (test_storage.StorageTests.test_orphan_resource_rejected_even_when_shared) ... ok
+test_read_connection_is_read_only_and_foreign_keys_are_enabled (test_storage.StorageTests.test_read_connection_is_read_only_and_foreign_keys_are_enabled) ... ok
+test_record_parent_and_primary_key (test_storage.StorageTests.test_record_parent_and_primary_key) ... ok
+test_resource_role_unique_allowed_set_and_parent (test_storage.StorageTests.test_resource_role_unique_allowed_set_and_parent) ... ok
+test_restart_preserves_changed_text_without_reseed (test_storage.StorageTests.test_restart_preserves_changed_text_without_reseed) ... ok
+test_role_credit_null_type_and_delete_constraints (test_storage.StorageTests.test_role_credit_null_type_and_delete_constraints) ... ok
+test_two_initializers_publish_one_complete_database (test_storage.StorageTests.test_two_initializers_publish_one_complete_database) ... ok
+test_unknown_version_is_rejected_without_modifying_file (test_storage.StorageTests.test_unknown_version_is_rejected_without_modifying_file) ... ok
+test_draft_activity_is_private_but_submission_is_visible (test_workspace.WorkspaceTests.test_draft_activity_is_private_but_submission_is_visible) ... 127.0.0.1 - - [19/Oct/2026 00:52:30] "POST /api/campus/session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:30] "POST /api/campus/session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:30] "POST /api/campus/session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:30] "GET /api/campus/state HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:31] "POST /api/campus/action HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:31] "GET /api/campus/state HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:31] "GET /api/campus/state HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:31] "GET /api/campus/state HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:31] "GET /api/campus/state HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:31] "POST /api/campus/action HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:31] "GET /api/campus/state HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:31] "GET /api/campus/state HTTP/1.1" 200 -
+ok
+test_logout_revokes_server_session (test_workspace.WorkspaceTests.test_logout_revokes_server_session) ... 127.0.0.1 - - [19/Oct/2026 00:52:32] "POST /api/campus/session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:32] "POST /api/campus/logout HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:32] "GET /api/campus/state HTTP/1.1" 401 -
+127.0.0.1 - - [19/Oct/2026 00:52:32] "GET /api/campus/bootstrap HTTP/1.1" 200 -
+ok
+test_material_revision_preserves_old_content_and_permissions (test_workspace.WorkspaceTests.test_material_revision_preserves_old_content_and_permissions) ... 127.0.0.1 - - [19/Oct/2026 00:52:32] "POST /api/campus/session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:32] "GET /api/campus/state HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:32] "GET /api/campus/state HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:32] "POST /api/campus/action HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:32] "POST /api/campus/session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:32] "GET /api/campus/state HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:32] "POST /api/campus/action HTTP/1.1" 403 -
+127.0.0.1 - - [19/Oct/2026 00:52:32] "POST /api/campus/session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:32] "GET /api/campus/state HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:32] "POST /api/campus/action HTTP/1.1" 403 -
+127.0.0.1 - - [19/Oct/2026 00:52:32] "GET /api/campus/state HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:32] "POST /api/campus/action HTTP/1.1" 400 -
+ok
+test_personal_preferences_persist_and_are_user_scoped (test_workspace.WorkspaceTests.test_personal_preferences_persist_and_are_user_scoped) ... 127.0.0.1 - - [19/Oct/2026 00:52:33] "POST /api/campus/session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:33] "GET /api/campus/state HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:33] "POST /api/campus/preferences HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:33] "GET /api/campus/state HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:33] "GET /api/campus/preferences HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:33] "POST /api/campus/session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:33] "GET /api/campus/preferences HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:33] "POST /api/campus/preferences HTTP/1.1" 400 -
+127.0.0.1 - - [19/Oct/2026 00:52:33] "POST /api/campus/preferences HTTP/1.1" 400 -
+127.0.0.1 - - [19/Oct/2026 00:52:33] "POST /api/campus/preferences HTTP/1.1" 400 -
+127.0.0.1 - - [19/Oct/2026 00:52:33] "GET /api/campus/preferences HTTP/1.1" 401 -
+ok
+test_read_mark_changes_neither_workflow_nor_other_identity (test_workspace.WorkspaceTests.test_read_mark_changes_neither_workflow_nor_other_identity) ... 127.0.0.1 - - [19/Oct/2026 00:52:34] "POST /api/campus/session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:34] "GET /api/campus/state HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:34] "POST /api/campus/action HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:34] "POST /api/campus/preferences HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:34] "GET /api/campus/state HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:34] "GET /api/campus/preferences HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:34] "POST /api/campus/session HTTP/1.1" 200 -
+127.0.0.1 - - [19/Oct/2026 00:52:34] "GET /api/campus/preferences HTTP/1.1" 200 -
+ok
+
+----------------------------------------------------------------------
+Ran 51 tests in 15.959s
+
+OK

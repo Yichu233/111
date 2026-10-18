@@ -15,7 +15,7 @@ from . import campus
 from .domain import APIError, list_offerings, list_resources, offering_for, offering_view, record_source, resource_content, supervision
 
 STATIC = Path(__file__).resolve().parent / "static"
-STATIC_ROUTES = {"/public": ("public.html", "text/html"), "/campus.js": ("campus.js", "text/javascript"), "/campus.css": ("campus.css", "text/css"), "/": ("index.html", "text/html"), "/app.js": ("app.js", "text/javascript"), "/public.js": ("public.js", "text/javascript"), "/public.css": ("public.css", "text/css"), "/styles.css": ("styles.css", "text/css")}
+STATIC_ROUTES = {"/workspace.js": ("workspace.js", "text/javascript"), "/workspace.css": ("workspace.css", "text/css"), "/public": ("public.html", "text/html"), "/campus.js": ("campus.js", "text/javascript"), "/campus.css": ("campus.css", "text/css"), "/": ("index.html", "text/html"), "/app.js": ("app.js", "text/javascript"), "/public.js": ("public.js", "text/javascript"), "/public.css": ("public.css", "text/css"), "/styles.css": ("styles.css", "text/css")}
 
 
 class AppServer(ThreadingHTTPServer):
