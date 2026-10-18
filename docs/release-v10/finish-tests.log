@@ -1,0 +1,14 @@
+PASS course sorting is chronological, query survives detail and reset restores scope
+PASS material filters combine with course context and expose only own-course create action
+PASS task queue separates today and future based on scene date, preserves URL filter
+PASS calendar due dates follow week navigation and open the exact follow-up
+PASS public catalog returns to the same page and filter instead of resetting
+PASS course source stays in integrated shell and returns to original course context
+PASS record checklist reflects actual text and index filtering retains selection
+PASS follow-up search and phase filter combine without changing records
+PASS preference read failure falls back safely after identity change
+PASS session expiry exposes recovery without discarding supervisor input
+PASS state failure after session switch cannot show old-role content
+PASS short desktop viewport retains service controls and all enhanced pages fit
+ALL PASS 12
+Browser suite passed; isolated database: C:\Users\HP\Documents\ChatGPT\金融科技项目管理\outputs\lab2-campus-v10\project\var\qa-19c7041dff85\aijiaoxue.sqlite3

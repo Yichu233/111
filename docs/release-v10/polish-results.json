@@ -1,0 +1,17 @@
+{
+  "passed": 11,
+  "checks": [
+    "course query and filter survive detail tabs, selector and return",
+    "calendar week is deep linked and home is always current scene week",
+    "supervisor draft survives course reading, return, reload and role switch",
+    "offline save preserves input and re-enables controls",
+    "stale version refresh keeps draft and allows safe server save",
+    "field validation places keyboard focus on the first incomplete field",
+    "searching a material opens that exact document directly",
+    "dirty modal closure requires explicit discard and preserves input on resume",
+    "director metric links and followup links open the intended subset",
+    "invalid routes and inaccessible records never show unrelated content",
+    "all visible desktop pages have named controls and no horizontal overflow"
+  ],
+  "errors": []
+}

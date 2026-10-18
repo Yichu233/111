@@ -3,7 +3,14 @@ const W={prefs:{density:'comfortable',landing:'home',pinned:[],read_events:[]},c
 Object.assign(I,{inbox:'M4 4h16v16H4zM4 14h5l2 3h2l2-3h5M8 8h8M8 11h5',people:'M9 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M2 21v-2a7 6 0 0 1 14 0v2M17 5a3 3 0 0 1 0 6M18 15a5 5 0 0 1 4 5',star:'m12 3 2.8 5.6 6.2.9-4.5 4.4 1 6.1-5.5-2.9-5.5 2.9 1-6.1L3 9.5l6.2-.9z',settings:'M4 7h16M4 17h16M8 4v6M16 14v6',help:'M9 8a3 3 0 1 1 5 2c-2 1-2 2-2 4M12 18h.01M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0',exit:'M10 4H4v16h6M9 12h12M17 8l4 4-4 4'});
 
 function iconButton(label,icon,fn,cls='utility-button'){const b=btn('',fn,cls);b.setAttribute('aria-label',label);b.title=label;b.append(ico(icon));return b;}
-async function savePrefs(patch){if(W.savingPrefs)return false;W.savingPrefs=true;try{W.prefs=await request('preferences',patch);document.body.dataset.density=W.prefs.density;return true;}catch(e){toast(e.message);return false;}finally{W.savingPrefs=false;}}
+async function savePrefs(patch){
+ if(W.savingPrefs||V.busy||V.writing)return false;
+ const actor=V.user.id;W.savingPrefs=true;$('#identity').disabled=true;
+ try{const prefs=await request('preferences',patch);if(V.user?.id!==actor)return false;W.prefs=prefs;document.body.dataset.density=prefs.density;return true;}
+ catch(e){toast(e.message);return false;}
+ finally{W.savingPrefs=false;$('#identity').disabled=!!V.busy||!!V.writing||!V.user;}
+}
+
 function pinButton(c){const pinned=W.prefs.pinned.includes(c.id),b=btn('',async()=>{b.disabled=true;const ids=W.prefs.pinned.includes(c.id)?W.prefs.pinned.filter(id=>id!==c.id):[...W.prefs.pinned,c.id];if(await savePrefs({pinned:ids})){render();toast(ids.includes(c.id)?'已加入常用课程':'已移出常用课程');}else b.disabled=false;},'pin-button');b.setAttribute('aria-pressed',String(pinned));b.setAttribute('aria-label',pinned?'取消常用课程':'设为常用课程');b.append(ico('star'),el('span','',pinned?'已设常用':'设为常用'));return b;}
 function pendingItems(){
  if(!V.data)return[];const out=[],role=V.user.role;
@@ -20,7 +27,7 @@ function workspaceNav(){
  for(const [heading,items]of groups){$('#nav').append(el('span','nav-group',heading));for(const [id,label,icon]of items){rows.push([id,label]);const l=a('',id,'nav-item');l.append(ico(icon),el('span','',label));if(id===active)l.setAttribute('aria-current','page');if(id==='inbox'&&pendingItems().length)l.append(el('b','nav-count',pendingItems().length));$('#nav').append(l);}}
  for(const link of document.querySelectorAll('.service-link')){if(link.hash==='#/'+route)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');}
  $('#page-title').textContent=route==='course'?(course(currentRoute()[1])?.name||'课程档案'):rows.find(x=>x[0]===route)?.[1]||({profile:'个人设置',help:'使用帮助'})[route]||'工作空间';
- document.title=$('#page-title').textContent+' · 爱教学';document.body.dataset.role=r;document.body.dataset.density=W.prefs.density;$('#avatar').textContent=V.user.name.slice(-2);$('#identity').value=V.user.id;$('#identity').disabled=false;
+ document.title=$('#page-title').textContent+' · 爱教学';document.body.dataset.role=r;document.body.dataset.density=W.prefs.density;$('#avatar').textContent=V.user.name.slice(-2);$('#identity').value=V.user.id;$('#identity').disabled=!!V.busy||!!V.writing;
  $('#inbox-link').replaceChildren(ico('inbox'),el('span','','待办'),el('b','utility-count',pendingItems().length));$('#course-switch').replaceChildren(ico('courses'),el('span','','课程'));$('#course-switch').onclick=courseSwitcher;
 }
 function portal(){
@@ -49,10 +56,7 @@ function workspacePage(route,id){({inbox:inboxPage,catalog:catalogPage,directory
 function inboxPage(){
  const root=$('#page'),items=pendingItems(),events=[...V.data.audit].reverse(),unread=events.filter(e=>!W.prefs.read_events.includes(e.id));root.append(title('任务与动态','集中处理当前身份的教学事项，查阅相关课程的业务变化。',btn('刷新',async()=>{try{await refresh();toast('业务状态已更新');}catch(e){toast(e.message);}})));
  const tabs=el('nav','tabs'),tab=routeParams().get('tab')||'tasks';for(const [id,label]of [['tasks','待处理 '+items.length],['activity','业务动态 '+unread.length+' 条未读']]){const l=a(label,'inbox'+(id==='activity'?'?tab=activity':''));if(id===tab)l.setAttribute('aria-current','page');tabs.append(l);}root.append(tabs);
- if(tab==='tasks'){
-  const list=el('div','inbox-list'),toolbar=el('div','toolbar');let type=routeParams().get('type')||'all';toolbar.append(select('事项类型',[['all','全部类型'],...Array.from(new Set(items.map(i=>i.type))).map(t=>[t,t])],type,v=>{type=v;setParam('type',v);draw();}));root.append(toolbar,list);
-  function draw(){list.replaceChildren();for(const x of items.filter(x=>type==='all'||x.type===type)){const row=a('',x.route,'inbox-row'),copy=el('div','inbox-copy');copy.append(el('h2','',x.title),el('p','',x.copy));row.append(chip(x.type,x.tone),copy,el('span','inbox-date',x.date),el('span','inbox-action','去处理'),ico('arrow'));list.append(row);}if(!list.children.length)list.append(empty('当前没有待处理事项','业务状态变化后，新的待办会在这里出现。'));}draw();
- }else{
+ if(tab==='tasks'){taskQueue(); }else{
   const head=section('最近业务动态',btn('全部标为已读',async()=>{if(await savePrefs({read_events:events.map(e=>e.id)})){render();toast('动态已标记为已读，业务待办保持原状态');}},'button small'));root.append(head);
   const list=el('div','activity-list');for(const event of events){const c=course(event.course_id),seen=W.prefs.read_events.includes(event.id),row=el('article','activity-item'+(seen?' seen':'')),dot=el('span','activity-dot'),copy=el('div');copy.append(el('h2','',event.actor+' · '+event.action),el('p','',c.name+' / '+c.class_name),el('time','',event.at.replace('T',' ').slice(0,19)));
    row.append(dot,copy,btn(seen?'查看课程':'查看并标记已读',async()=>{if(!seen){const ids=[...new Set([...W.prefs.read_events,event.id])].filter(id=>events.some(e=>e.id===id));if(!await savePrefs({read_events:ids}))return;}go(a('','course/'+c.id+(event.action.includes('资料')?'/materials':event.action.includes('跟进')||event.action.includes('提交听课')?'/feedback':'')).hash.slice(2));},'button small'));list.append(row);}
@@ -73,7 +77,7 @@ async function catalogPage(id){
  const root=$('#page'),epoch=++W.catalogEpoch;root.append(title('公开课程库','东北大学公开课程认定资料，作为课程建设参考；与本学期开课档案分别管理。'));const content=el('div');content.append(el('p','muted','正在读取公开目录…'));root.append(content);
  try{if(!W.catalog){const response=await fetch('/api/public-catalog');if(!response.ok)throw Error('公开目录暂不可用');W.catalog=await response.json();}if(epoch!==W.catalogEpoch||!content.isConnected)return;content.replaceChildren();
   if(id){const c=W.catalog.items.find(c=>c.id===id);if(!c){content.append(empty('没有此公开课程记录','请返回课程库重新选择。'),a('返回课程库','catalog','button'));return;}
-   content.append(a('返回课程库','catalog','back-link'));const head=el('section','catalog-detail');head.append(chip(c.kind,'lilac'),el('h2','',c.name),el('p','',c.department));const facts=el('dl','facts');for(const [k,v]of [['学校',c.school],['名单负责人',c.leader],['认定批次',c.batch],['原始序号',c.source_sequence],['课程代码',c.course_code??'公开来源未提供'],['学分',c.credits??'公开来源未提供']]){const row=el('div');row.append(el('dt','',k),el('dd','',v));facts.append(row);}head.append(facts);content.append(head);
+   const backRoute=routeParams().get('from')||'catalog';content.append(a(backRoute.startsWith('course/')?'返回开课详情':'返回课程库',/^(catalog|course)([/?]|$)/.test(backRoute)?backRoute:'catalog','back-link'));const head=el('section','catalog-detail');head.append(chip(c.kind,'lilac'),el('h2','',c.name),el('p','',c.department));const facts=el('dl','facts');for(const [k,v]of [['学校',c.school],['名单负责人',c.leader],['认定批次',c.batch],['原始序号',c.source_sequence],['课程代码',c.course_code??'公开来源未提供'],['学分',c.credits??'公开来源未提供']]){const row=el('div');row.append(el('dt','',k),el('dd','',v));facts.append(row);}head.append(facts);content.append(head);
    const source=W.catalog.sources.find(s=>s.id===c.source_id);const origin=el('div','source-block');origin.append(el('h3','','原始公开来源'),el('p','',source.title+' / '+source.publisher),el('p','muted','快照 '+source.snapshot_date+' · 原表行 '+c.source_row));const link=a('查看学校原始页面',source.url,'text-link');link.href=source.url;link.target='_blank';link.rel='noopener noreferrer';origin.append(link);content.append(origin);
    const related=(V.data?.courses||[]).filter(x=>x.catalog_id===c.id);if(related.length){content.append(section('关联的场景开课'));related.forEach(x=>content.append(taskRow(x.name,x.class_name,'course/'+x.id,'blue')));}content.append(el('p','footnote','公开名单的负责人不等同于本学期任课教师，课程认定不代表督导结果。'));return;
   }
@@ -81,7 +85,7 @@ async function catalogPage(id){
   q.oninput=()=>{page=1;setParam('q',q.value);setParam('page','');draw();};tools.append(q,select('开课单位',[['all','全部单位'],...Array.from(new Set(W.catalog.items.map(x=>x.department))).sort().map(x=>[x,x])],dept,v=>{dept=v;page=1;setParam('dept',v);setParam('page','');draw();}));content.append(tools,out);
   function draw(){const rows=W.catalog.items.filter(x=>(dept==='all'||x.department===dept)&&(x.name+x.leader+x.department).toLowerCase().includes(q.value.trim().toLowerCase())),pages=Math.max(1,Math.ceil(rows.length/15));page=Number.isInteger(page)?Math.max(1,Math.min(page,pages)):1;out.replaceChildren(el('p','result-count',rows.length+' 条认定记录 · 每页15条'));
    if(!rows.length){out.append(empty('没有匹配的公开课程','更换关键词或单位筛选。'));return;}
-   out.append(table(['课程名称','所属单位','名单负责人','类别','批次'],rows.slice((page-1)*15,page*15).map(x=>[a(x.name,'catalog/'+x.id,'table-title'),x.department,x.leader,chip(x.kind,'blue'),x.batch])));
+   out.append(table(['课程名称','所属单位','名单负责人','类别','批次'],rows.slice((page-1)*15,page*15).map(x=>[a(x.name,'catalog/'+x.id+'?from='+encodeURIComponent(location.hash.slice(2)),'table-title'),x.department,x.leader,chip(x.kind,'blue'),x.batch])));
    const pager=el('div','pagination'),prev=btn('上一页',()=>{page--;setParam('page',String(page));draw();}),next=btn('下一页',()=>{page++;setParam('page',String(page));draw();});prev.disabled=page===1;next.disabled=page===pages;pager.append(prev,el('span','',page+' / '+pages),next);out.append(pager);
   }draw();
  }catch(e){if(content.isConnected)content.replaceChildren(empty('暂时无法读取课程库',e.message),btn('重试',()=>render(),'button primary'));}
@@ -110,4 +114,56 @@ function helpPage(){
  const q=input('搜索帮助关键词','','search'),list=el('div','help-list');root.append(q,list);q.classList.add('help-search');q.oninput=draw;function draw(){list.replaceChildren();for(const [h,p,route,label]of guides.filter(g=>g.join('').includes(q.value.trim()))){const d=el('details','help-item'),summary=el('summary','',h),body=el('div');body.append(el('p','',p),a(label,route,'text-link'));d.append(summary,body);list.append(d);}if(!list.children.length)list.append(empty('没有匹配的帮助','尝试“资料”“草稿”或“反馈”等关键词。'));}draw();
  const support=el('div','help-note');support.append(ico('help'),el('p','','遇到保存失败时，先保留当前输入，再根据提示刷新状态重试。浏览器页签暂存不能替代服务器草稿。'));root.append(support);
 }
+
+
+// Shared task semantics are derived from the visible server state, never invented.
+function defaultPrefs(){return {density:'comfortable',landing:'home',pinned:[],read_events:[]};}
+function datedTasks(){
+ return pendingItems().map(x=>{
+  const follow=V.data.followups.find(f=>f.id===x.id),task=V.data.tasks.find(t=>t.id===x.id);
+  let due=follow?.due||task?.date||null;
+  if(!due&&x.id.startsWith('prep-')){const c=course(x.id.slice(5)),d=new Date(V.data.as_of+'T12:00:00');d.setDate(d.getDate()+(c.day-(d.getDay()+6)%7+7)%7);due=d.toISOString().slice(0,10);}
+  const urgency=!due?'routine':due<V.data.as_of?'overdue':due===V.data.as_of?'today':'upcoming';
+  return {...x,due,urgency};
+ }).sort((a,b)=>({overdue:0,today:1,routine:2,upcoming:3}[a.urgency]-{overdue:0,today:1,routine:2,upcoming:3}[b.urgency])||String(a.due||'').localeCompare(String(b.due||'')));
+}
+function taskQueue(){
+ const root=$('#page'),items=datedTasks();
+ let urgency=routeParams().get('urgency')||'all',type=routeParams().get('type')||'all';
+ const tabs=el('div','queue-filters'),out=el('div','inbox-list'),tools=el('div','toolbar queue-tools');
+ const options=[['all','全部事项'],['overdue','已过期'],['today','今天'],['upcoming','后续安排'],['routine','待核查']];
+ for(const [value,label]of options){const count=items.filter(x=>value==='all'||x.urgency===value).length,b=btn(label+' '+count,()=>{urgency=value;setParam('urgency',value);draw();},'queue-filter');b.dataset.value=value;tabs.append(b);}
+ tools.append(field('事项类型',select('事项类型',[['all','全部类型'],...Array.from(new Set(items.map(x=>x.type))).map(x=>[x,x])],type,v=>{type=v;setParam('type',v);draw();})),el('span','queue-clock','按场景日期 '+V.data.as_of+' 排序'));
+ root.append(tabs,tools,out);
+ function draw(){for(const b of tabs.children)b.setAttribute('aria-pressed',String(b.dataset.value===urgency));out.replaceChildren();const rows=items.filter(x=>(urgency==='all'||x.urgency===urgency)&&(type==='all'||x.type===type));
+  for(const x of rows){const row=a('',x.route,'inbox-row'),copy=el('div','inbox-copy'),meta=el('div','inbox-due');copy.append(el('h2','',x.title),el('p','',x.copy));meta.append(chip(({overdue:'已过期',today:'今天处理',upcoming:'后续安排',routine:'待核查'})[x.urgency],({overdue:'coral',today:'gold',upcoming:'blue',routine:'neutral'})[x.urgency]),el('span','inbox-date',x.date));row.append(chip(x.type,x.tone),copy,meta,el('span','inbox-action','去处理'),ico('arrow'));out.append(row);}
+  if(!rows.length)out.append(empty(items.length?'当前筛选没有事项':'当前没有待处理事项',items.length?'切换“全部事项”或其他类型继续查看。':'业务状态变化后，新的待办会在这里出现。'));
+ }
+ draw();
+}
+function calendarDeadlines(){
+ const root=$('#page'),dates=weekDates(),first=dates[0],lastDate=new Date(first+'T12:00:00');lastDate.setDate(lastDate.getDate()+6);const last=lastDate.toISOString().slice(0,10);
+ const fs=V.data.followups.filter(f=>f.status!=='closed'&&f.due>=first&&f.due<=last).sort((a,b)=>a.due.localeCompare(b.due));
+ const box=el('section','deadline-panel');box.append(section('本周跟进截止事项',a('全部教学跟进','followups?status=active','text-link')));
+ if(!fs.length)box.append(el('p','muted','本周没有尚未关闭的跟进截止事项。'));
+ for(const f of fs){const c=course(f.course_id),row=a('','followups/'+f.id,'deadline-row');row.append(el('time','',f.due.slice(5)),el('strong','',f.title),el('span','muted',c.name+' / '+c.class_name),chip(f.status==='replied'?'待复核':f.due<V.data.as_of?'已过期':'待回复',f.status==='replied'?'blue':f.due<V.data.as_of?'coral':'gold'));box.append(row);}
+ root.append(box);
+}
+function refineWorkspace(){
+ const route=currentRoute()[0],root=$('#page');document.body.dataset.page=route;
+ // Retain only navigation scrolling at short desktop heights; keep service links reachable.
+ if(route==='home'){
+  const term=root.querySelector('.term-line');if(term){const n=datedTasks().filter(x=>x.urgency==='today'||x.urgency==='overdue').length;if(n)term.append(a(n+' 项需优先处理','inbox','priority-shortcut'));}
+ }
+ if(route==='calendar')calendarDeadlines();
+ if(route==='course'){
+  const c=course(currentRoute()[1]);if(c){const tabs=root.querySelector('.tabs');if(tabs)for(const link of tabs.children){link.setAttribute('aria-label',link.textContent);if(link.hash.includes('/materials'))link.append(el('span','tab-count',materials(c).length));if(link.hash.includes('/feedback'))link.append(el('span','tab-count',records(c).length));}}
+ }
+ if(route==='followups'){
+  const copy=el('div','process-strip');for(const label of ['主任提出要求','任课教师回复','主任复核关闭'])copy.append(el('span','',label));root.querySelector('.page-heading')?.after(copy);
+ }
+ // Keep the user on the same task while an operation is being committed.
+ for(const link of document.querySelectorAll('a[href^="#/"]'))link.addEventListener('click',e=>{if(V.writing||V.busy){e.preventDefault();toast('正在保存，请完成后再切换页面。');}});
+}
+
 init();

@@ -1,0 +1,18 @@
+{
+  "passed": 12,
+  "checks": [
+    "course sorting is chronological, query survives detail and reset restores scope",
+    "material filters combine with course context and expose only own-course create action",
+    "task queue separates today and future based on scene date, preserves URL filter",
+    "calendar due dates follow week navigation and open the exact follow-up",
+    "public catalog returns to the same page and filter instead of resetting",
+    "course source stays in integrated shell and returns to original course context",
+    "record checklist reflects actual text and index filtering retains selection",
+    "follow-up search and phase filter combine without changing records",
+    "preference read failure falls back safely after identity change",
+    "session expiry exposes recovery without discarding supervisor input",
+    "state failure after session switch cannot show old-role content",
+    "short desktop viewport retains service controls and all enhanced pages fit"
+  ],
+  "errors": []
+}
