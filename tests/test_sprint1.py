@@ -3,6 +3,9 @@ import http.client
 import json
 import threading
 import unittest
+import tempfile
+from pathlib import Path
+import sqlite3
 
 from app.server import AppServer
 
@@ -10,7 +13,8 @@ from app.server import AppServer
 class Sprint1Tests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.server = AppServer(("127.0.0.1", 0))
+        cls.temp = tempfile.TemporaryDirectory()
+        cls.server = AppServer(("127.0.0.1", 0), database=Path(cls.temp.name) / "test.sqlite3")
         cls.thread = threading.Thread(target=cls.server.serve_forever, daemon=True)
         cls.thread.start()
 
@@ -19,6 +23,7 @@ class Sprint1Tests(unittest.TestCase):
         cls.server.shutdown()
         cls.server.server_close()
         cls.thread.join()
+        cls.temp.cleanup()
 
     def setUp(self):
         self.cookie = ""
@@ -170,6 +175,24 @@ class Sprint1Tests(unittest.TestCase):
             self.get("/api/offerings" + query, 400)
         self.get("/api/resources/R01/content", 400)
 
+    def test_switch_invalidates_previous_session(self):
+        self.login('director')
+        previous = self.cookie
+        self.login('teacher-empty')
+        current = self.cookie
+        self.cookie = previous
+        self.get('/api/offerings/K01', 401)
+        self.cookie = current
+        self.assertEqual(self.get('/api/offerings?term_id=2026-fall')['items'], [])
+
+    def test_missing_session_user_returns_401(self):
+        self.login()
+        token = self.cookie.split('=', 1)[1]
+        import time
+        with self.server.session_lock:
+            self.server.sessions[token] = ('removed-user', time.time() + 60)
+        self.get('/api/offerings/K01', 401)
+
     def test_static_assets_and_no_private_files(self):
         for path in ("/", "/app.js", "/styles.css"):
             status, body, headers = self.request(path)
@@ -179,6 +202,37 @@ class Sprint1Tests(unittest.TestCase):
         self.login()
         for path in ("/../data.py", "/%2e%2e/app/data.py", "/.git/config"):
             self.get(path, 404)
+
+
+class RestartTests(unittest.TestCase):
+    def test_real_http_restart_returns_preserved_database_text(self):
+        with tempfile.TemporaryDirectory() as directory:
+            database = Path(directory) / 'restart.sqlite3'
+            for attempt in range(2):
+                server = AppServer(('127.0.0.1', 0), database=database)
+                thread = threading.Thread(target=server.serve_forever, daemon=True)
+                thread.start()
+                try:
+                    client = http.client.HTTPConnection('127.0.0.1', server.server_port, timeout=5)
+                    client.request('POST', '/api/demo-session', json.dumps({'user_id':'teacher-a'}), {'Content-Type':'application/json'})
+                    response = client.getresponse(); response.read()
+                    self.assertEqual(response.status, 200)
+                    cookie = response.getheader('Set-Cookie').split(';')[0]
+                    client.request('GET', '/api/offerings/K01', headers={'Cookie':cookie})
+                    response = client.getresponse(); body = json.loads(response.read())
+                    self.assertEqual(response.status, 200)
+                    if attempt:
+                        self.assertEqual(body['course']['description'], '持久化重启验收')
+                    client.close()
+                finally:
+                    server.shutdown(); server.server_close(); thread.join()
+                if not attempt:
+                    connection = sqlite3.connect(database)
+                    try:
+                        connection.execute("UPDATE course SET description='持久化重启验收' WHERE id='C01'")
+                        connection.commit()
+                    finally:
+                        connection.close()
 
 
 if __name__ == "__main__":

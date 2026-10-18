@@ -4,3 +4,10 @@ __pycache__/
 artifacts/
 *.zip
 node_modules/
+var/
+*.sqlite3
+*.sqlite3-journal
+*.sqlite3-wal
+*.sqlite3-shm
+*.bundle
+.DS_Store
