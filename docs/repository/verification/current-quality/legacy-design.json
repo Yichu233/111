@@ -1,0 +1,178 @@
+{
+  "executed_at": "2026-10-18T16:56:07.036962+00:00",
+  "sqlite": "3.53.1",
+  "requirements": 32,
+  "tables": 8,
+  "columns": 37,
+  "objects": {
+    "index": 6,
+    "table": 8,
+    "trigger": 3
+  },
+  "assertions": [
+    {
+      "expected": "reject",
+      "rule": "BR-002 cross-course scoped resource",
+      "passed": true
+    },
+    {
+      "expected": "accept",
+      "rule": "BR-002 valid adjacent scoped resource",
+      "passed": true
+    },
+    {
+      "expected": "accept",
+      "rule": "BR-002 course-shared resource",
+      "passed": true
+    },
+    {
+      "expected": "reject",
+      "rule": "BR-008 course-shared resource must still have a real course",
+      "passed": true
+    },
+    {
+      "expected": "reject",
+      "rule": "BR-002 resource scope update cannot cross course",
+      "passed": true
+    },
+    {
+      "expected": "accept",
+      "rule": "BR-002 resource scope update within same course",
+      "passed": true
+    },
+    {
+      "expected": "reject",
+      "rule": "BR-008 duplicate assignment",
+      "passed": true
+    },
+    {
+      "expected": "accept",
+      "rule": "BR-008 distinct teacher can join the same opening",
+      "passed": true
+    },
+    {
+      "expected": "reject",
+      "rule": "RL-002 director cannot teach",
+      "passed": true
+    },
+    {
+      "expected": "accept",
+      "rule": "RL-002 unassigned teacher can teach",
+      "passed": true
+    },
+    {
+      "expected": "reject",
+      "rule": "RL-002 assignment update cannot choose a non-teacher",
+      "passed": true
+    },
+    {
+      "expected": "accept",
+      "rule": "RL-002 assignment update can choose another teacher",
+      "passed": true
+    },
+    {
+      "expected": "reject",
+      "rule": "RL-002 assigned teacher cannot become a director",
+      "passed": true
+    },
+    {
+      "expected": "accept",
+      "rule": "RL-002 unassigned teacher can change role",
+      "passed": true
+    },
+    {
+      "expected": "reject",
+      "rule": "BR-008 orphan assignment",
+      "passed": true
+    },
+    {
+      "expected": "accept",
+      "rule": "BR-008 real opening assignment",
+      "passed": true
+    },
+    {
+      "expected": "reject",
+      "rule": "BR-008 duplicate resource role",
+      "passed": true
+    },
+    {
+      "expected": "accept",
+      "rule": "BR-008 another role on a real resource",
+      "passed": true
+    },
+    {
+      "expected": "reject",
+      "rule": "BR-008 orphan resource role",
+      "passed": true
+    },
+    {
+      "expected": "reject",
+      "rule": "BR-008 unsupported role",
+      "passed": true
+    },
+    {
+      "expected": "accept",
+      "rule": "BR-008 valid role",
+      "passed": true
+    },
+    {
+      "expected": "reject",
+      "rule": "BR-008 orphan record",
+      "passed": true
+    },
+    {
+      "expected": "accept",
+      "rule": "BR-008 record on real opening",
+      "passed": true
+    },
+    {
+      "expected": "reject",
+      "rule": "BR-008 referenced course deletion",
+      "passed": true
+    },
+    {
+      "expected": "accept",
+      "rule": "BR-008 removal of unused role assignment",
+      "passed": true
+    },
+    {
+      "expected": "reject",
+      "rule": "AT-003 negative credits",
+      "passed": true
+    },
+    {
+      "expected": "accept",
+      "rule": "AT-003 zero credits",
+      "passed": true
+    },
+    {
+      "expected": "reject",
+      "rule": "BR-008 null identifier",
+      "passed": true
+    },
+    {
+      "expected": "accept",
+      "rule": "AT-003 unknown course description remains null",
+      "passed": true
+    }
+  ],
+  "passed": 29,
+  "query_plans_on_sample": {
+    "term": [
+      "SEARCH offering USING COVERING INDEX ix_offering_term (term_id=?)"
+    ],
+    "teacher": [
+      "SEARCH teaching_assignment USING COVERING INDEX ix_assignment_user (user_id=?)"
+    ],
+    "resources": [
+      "SEARCH resource USING COVERING INDEX ix_resource_scope (course_id=?)",
+      "USE TEMP B-TREE FOR ORDER BY"
+    ],
+    "records": [
+      "SEARCH supervision_record USING COVERING INDEX ix_record_offering_date (offering_id=?)"
+    ]
+  },
+  "dictionary_exact": true,
+  "ddl_copies_exact": true,
+  "traceability_complete": true
+}

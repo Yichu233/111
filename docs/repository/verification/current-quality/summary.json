@@ -1,0 +1,10 @@
+{
+  "executed_at": "2026-10-19T00:56:07+08:00",
+  "unit_tests": 51,
+  "legacy_schema_assertions": 29,
+  "checkout_smoke_passed": true,
+  "campus_executable_ast_unchanged": true,
+  "frontend_files_equal_v10": true,
+  "other_app_files_equal_v10": true,
+  "human_review_performed_by_this_script": false
+}
