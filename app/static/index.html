@@ -1,6 +1,43 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#182e50"><link rel="icon" href="data:,"><title>爱教学 · 教学工作空间</title><link rel="stylesheet" href="/styles.css"><script src="/app.js" defer></script></head><body>
-<a class="skip" href="#page">跳转到主要内容</a>
-<aside class="sidebar"><a class="brand" href="#/home"><span class="brand-symbol">教</span><span>爱教学<small>教学工作空间</small></span></a><div class="workspace-label">教学工作区</div><nav id="global-nav" aria-label="主导航"></nav><div class="sidebar-bottom"><button id="help" class="help-button" type="button">使用帮助</button><div class="demo-tag"><span></span>教学演示 · 模拟数据</div><p>第15组 · 爱教学<br>课程信息 / 教学资源 / 教学评价</p></div></aside>
-<div class="app-shell"><header class="topbar"><div class="location-label"><span class="location-dot"></span><strong id="page-name">工作台</strong><span id="scope-note">课程 · 资源 · 教学评价</span></div><div class="account-tools"><label class="sr-only" for="term">学期</label><select id="term" disabled aria-label="学期"></select><div class="account"><span id="avatar" class="avatar">教</span><div><strong id="user-name">欢迎使用爱教学</strong><small id="role-label">选择工作身份</small></div><label class="sr-only" for="identity">切换模拟身份</label><select id="identity" aria-label="切换模拟身份" disabled></select></div></div></header><main id="page" tabindex="-1" aria-busy="false"><div class="empty"><h1>正在连接教学工作空间</h1><p>正在准备课程与角色信息…</p></div></main><footer class="app-footer">爱教学 / 课程与教学档案 <span>本地教学演示，所有业务数据均为模拟</span></footer></div>
-<div id="toast" class="sr-only" role="status"></div><dialog id="help-dialog"><div class="help-head"><h2>使用教学工作空间</h2><button id="close-help" class="button" type="button">关闭</button></div><p>通过左侧导航进入工作台、课程、资源和教学安排。主任与督导还可以查阅督导记录。</p><ol><li>在顶部选择身份与学期。教师使用“课前准备”、主任使用“开课核查”、督导使用“督导查阅”，进入具体开课后查看安排、资料与相应记录。</li><li>从课程中心进入具体教学班的课程空间。</li><li>在“教学资源”选择资料，阅读页可切换同课资料，并返回原课程。</li></ol><p>工作清单可按课程和关注范围筛选，并导出当前结果；督导记录可按日期搜索并在站内查阅来源。查阅备忘需要点击“保存到本机”，只在当前浏览器保存，不会同步到其他成员。</p><p>收藏与最近访问保存在当前浏览器，按身份与学期分别记录。清除浏览器数据会同时清除这些偏好。</p><p class="footnote">这是本地只读教学演示。身份切换不是实际登录；未知数据不当作零，无记录不代表未督导。</p></dialog>
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#5146b8"><link rel="icon" href="data:,">
+  <title>爱教学 · 课程工作区</title><link rel="stylesheet" href="/styles.css"><script src="/app.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#workspace">跳转到课程查询</a>
+<aside class="brand-rail">
+  <a class="brand" href="/">爱教学<span>开课与教学档案</span></a>
+  <div class="rail-section" aria-current="page">课程工作区</div>
+  <div class="role-context"><span id="role-mark" class="role-mark">未选身份</span><h2 id="scope-title">请选择模拟身份</h2><p id="role-task">确认身份后，查阅对应范围的开课。</p><div id="role-tools" class="role-tools" aria-label="当前角色工作入口"></div></div>
+  <p class="rail-note">本地模拟 · 只读<br>姓名、课程与记录均为模拟数据。<br>不代表学校正式授权策略。</p>
+</aside>
+<main id="workspace">
+  <header class="page-header"><div><h1>课程工作区</h1><p>从一门课程出发，让教学安排、资料与督导事实清楚相连。</p></div><div class="header-actions"><span class="environment">模拟教学环境</span><button id="focus-mode" class="quiet-button" type="button" aria-expanded="true" aria-controls="course-index">专注阅读</button></div></header>
+  <section class="query-section" aria-label="查询范围">
+    <div class="field"><label for="identity">模拟身份</label><select id="identity" disabled aria-describedby="scope-detail"><option>正在加载身份…</option></select></div>
+    <div class="field"><label for="term">学期</label><select id="term" disabled><option>正在加载学期…</option></select></div>
+    <p id="scope-detail">先确认身份，再查询授权开课。</p>
+  </section>
+  <div id="notice" class="notice hidden" role="alert"></div>
+  <section class="workspace-grid" aria-label="开课与关联信息">
+    <section id="course-index" class="index-panel" aria-labelledby="list-title">
+      <div class="section-heading"><h2 id="list-title"><span id="list-name">可查开课</span> <span id="offering-count" class="count">—</span></h2><span id="result-caption" class="heading-note">等待查询</span></div>
+      <div class="table-tools">
+        <div class="field search-field"><label for="search">查找开课</label><input id="search" type="search" placeholder="课程名称 / 编号 / 班级 / 教师" disabled></div>
+        <div class="field"><label for="teaching-filter">授课方式</label><select id="teaching-filter" disabled><option value="all">全部方式</option><option value="joint">联合授课</option><option value="single">单人授课</option></select></div>
+        <div class="field"><label for="sort">排序</label><select id="sort" disabled><option value="id">开课编号</option><option value="course">课程名称</option><option value="class">教学班</option></select></div>
+      </div>
+      <div id="offering-list" aria-live="polite" aria-busy="false"><div class="empty"><h3>先选择模拟身份</h3><p>确认身份后，按当前范围查询开课。</p></div></div>
+      <p class="table-note">每项对应一个教学班的具体开课。联合授课只列一项。</p>
+    </section>
+    <section class="detail-panel" aria-label="选中开课的详细信息"><div id="detail" aria-live="polite" aria-busy="false"><div class="empty"><h2>开课详情</h2><p>从左侧目录选中一条开课，查看安排与关联内容。</p></div></div></section>
+  </section>
+  <footer>课程档案与具体开课分别记录；未查询到督导记录不等于未督导。</footer>
+</main>
+<dialog id="reader" aria-labelledby="reader-title" aria-describedby="reader-context">
+  <header class="reader-header"><div><p id="reader-context"></p><h2 id="reader-title">资料阅读</h2></div><button id="reader-close" class="quiet-button" type="button">关闭阅读</button></header>
+  <div id="reader-body"></div><footer id="reader-actions"></footer>
+</dialog>
 </body></html>
