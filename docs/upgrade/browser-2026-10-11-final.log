@@ -1,0 +1,15 @@
+PASS explicit simulated identity; no preselected scope
+PASS teacher resources preserve four states and open actual content
+PASS course/class/teacher search, joint filter and coherent selection
+PASS empty teacher and term clear previous scope
+PASS supervisor facts and source stay in opening context; known empty differs from incomplete
+PASS director restricted resource and sort preserve selected opening
+PASS delayed old detail cannot overwrite new selection
+PASS identity switch cancels late data from previous identity
+PASS failed identity clears old scope and retries chosen identity
+PASS failed list clears results and retry restores authorized scope
+PASS detail and associated-content errors provide usable retries
+PASS keyboard tabs and desktop widths remain usable
+PASS switching tabs during first associated request clears current busy state
+PASS bootstrap failure recovers without reload or duplicate handlers
+14 browser checks passed; no page errors.

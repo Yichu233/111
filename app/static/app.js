@@ -1,258 +1,267 @@
-"use strict";
-
-// 所有动态文本通过textContent写入；服务端负责授权，界面只呈现查询结果。
-const $ = (selector) => document.querySelector(selector);
-const state = {user: null, offerings: [], selected: null, tab: "resources", epoch: 0, controller: null};
-const roleNames = {teacher: "教师", director: "主任", supervisor: "督导"};
-
-function el(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text !== undefined) node.textContent = text;
-  return node;
+'use strict';
+// DOM-only text insertion; authorization always remains on the existing API.
+const $=s=>document.querySelector(s);
+const S={user:null,users:[],terms:[],term:'2026-fall',offerings:[],resources:new Map(),records:new Map(),failures:[],ready:false,loading:false,epoch:0,controller:null,query:'',mode:'all',view:'cards',sort:'code',resourceQuery:'',resourceStatus:'all',resourceCourse:'all',recordQuery:''};
+const roles={teacher:'教师',director:'教研室主任',supervisor:'教学督导'};
+const paths={work:'M9 4h10v17H5V4h4M9 3h6v4H9zM8 12l2 2 5-5M8 18h7',home:'M3 11 12 3l9 8M5 10v11h5v-7h4v7h5V10',courses:'M4 4h7v16H4zM13 4h7v16h-7M7 8h1M16 8h1',resources:'M5 3h9l5 5v13H5zM14 3v6h5M8 13h8M8 17h6',schedule:'M4 5h16v16H4zM8 3v5M16 3v5M4 10h16M8 14h2M14 14h2',supervision:'M9 4h10v17H5V4h4M9 3h6v4H9zM8 12l2 2 5-5M8 18h7',search:'M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15M16 16l5 5',star:'m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z',arrow:'M5 12h14M14 7l5 5-5 5',grid:'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z',list:'M9 5h12M9 12h12M9 19h12M3 5h1M3 12h1M3 19h1',person:'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M4 21v-2a8 6 0 0 1 16 0v2',back:'M19 12H5M10 7l-5 5 5 5',help:'M9 8a3 3 0 1 1 5 2c-2 1-2 2-2 4M12 18h.01M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0',chevron:'m9 5 7 7-7 7'};
+function node(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;}
+function icon(name){const n=document.createElementNS('http://www.w3.org/2000/svg','svg');n.setAttribute('viewBox','0 0 24 24');n.setAttribute('aria-hidden','true');const p=document.createElementNS(n.namespaceURI,'path');p.setAttribute('d',paths[name]||paths.courses);n.append(p);return n;}
+function button(text,fn,cls='button'){const n=node('button',cls,text);n.type='button';n.addEventListener('click',fn);return n;}
+function link(text,href,cls=''){const n=node('a',cls,text);n.href=href;return n;}
+function routeLink(text,route,cls=''){return link(text,'#/'+route,cls);}
+function external(text,url){const a=link(text,url,'text-link');a.target='_blank';a.rel='noopener noreferrer';a.setAttribute('aria-label',text+'（新窗口）');return a;}
+function field(label,control){const n=node('label','field');n.append(node('span','field-label',label),control);return n;}
+function input(label,value,handler){const n=node('input');n.type='search';n.placeholder=label;n.setAttribute('aria-label',label);n.value=value;n.addEventListener('input',()=>handler(n.value));return n;}
+function select(label,items,value,handler){const n=node('select');n.setAttribute('aria-label',label);for(const [v,t] of items){const o=node('option','',t);o.value=v;n.append(o);}n.value=value;n.addEventListener('change',()=>handler(n.value));return n;}
+function section(title,action){const n=node('div','section-heading');n.append(node('h2','',title));if(action)n.append(action);return n;}
+function empty(title,description,action){const n=node('div','empty');n.append(icon('courses'),node('h2','',title),node('p','',description));if(action)n.append(action);return n;}
+function notice(text){return node('div','inline-notice',text);}
+function badge(status,label){return node('span','badge '+status,label);}
+function canSupervise(){return S.user && S.user.role!=='teacher';}
+function termName(){return S.terms.find(t=>t.id===S.term)?.name||S.term;}
+function theme(o){return o.course_id==='C02'?'ocean':o.course_id==='C03'?'amber':'blue';}
+function route(){return (location.hash.slice(2)||'home').split('/');}
+function go(r){if(location.hash==='#/'+r)render();else location.hash='/'+r;}
+function stored(kind){try{const value=JSON.parse(localStorage.getItem(`aijiaoxue:${kind}:${S.user.id}:${S.term}`)||'[]');return Array.isArray(value)?value.filter(x=>typeof x==='string'):[];}catch{return [];}}
+function save(kind,values){try{localStorage.setItem(`aijiaoxue:${kind}:${S.user.id}:${S.term}`,JSON.stringify(values));}catch{$('#toast').textContent='浏览器未允许保存偏好，本次操作不会跨刷新保留。';}}
+function favorite(id){return stored('favorites').includes(id);}
+function star(o){const b=button('',()=>{const list=stored('favorites');save('favorites',list.includes(o.id)?list.filter(x=>x!==o.id):[...list,o.id]);const active=favorite(o.id);b.classList.toggle('saved',active);b.setAttribute('aria-pressed',String(active));b.setAttribute('aria-label',(active?'取消收藏':'收藏')+o.course.name+' '+o.class_name);if(S.mode==='favorites'&&route()[0]==='courses')renderCourses();if(S.workMode==='favorites'&&route()[0]==='work')render();},'star');b.append(icon('star'));b.classList.toggle('saved',favorite(o.id));b.setAttribute('aria-pressed',String(favorite(o.id)));b.setAttribute('aria-label',(favorite(o.id)?'取消收藏':'收藏')+o.course.name+' '+o.class_name);return b;}
+function startRequest(){S.controller?.abort();S.controller=new AbortController();return {epoch:++S.epoch,signal:S.controller.signal};}
+async function api(url,options={}){const r=await fetch(url,{credentials:'same-origin',...options});const d=await r.json();if(!r.ok)throw new Error(d.message||'请求未完成，请重试。');return d;}
+function shell(){
+ const nav=$('#global-nav');nav.replaceChildren();
+ const entries=roleNavigation();document.body.dataset.role=S.user?.role||'guest';
+ const current=route()[0];for(const [id,title] of entries){const a=routeLink('',id,'nav-link');a.append(icon(id),node('span','',title));if((current===id)||(['prepare'].includes(current)&&id==='work')||(current==='evidence'&&id==='supervision')||(['course','reader'].includes(current)&&id==='courses'))a.setAttribute('aria-current','page');nav.append(a);}
+ $('#role-label').textContent=S.user?roles[S.user.role]:'选择工作身份';$('#user-name').textContent=S.user?.name||'欢迎使用爱教学';$('#avatar').textContent=S.user?.name.slice(0,1)||'教';
+ $('#scope-note').textContent=S.user?(S.user.role==='teacher'?'本人任课范围':S.user.department+'授权范围'):'课程 · 资源 · 教学评价';
+ const identity=$('#identity');identity.replaceChildren();const placeholder=node('option','','选择模拟身份');placeholder.value='';placeholder.disabled=true;identity.append(placeholder);for(const u of S.users){const option=node('option','',u.name+' / '+roles[u.role]);option.value=u.id;identity.append(option);}identity.value=S.user?.id||'';identity.disabled=S.loading;
+ const term=$('#term');term.replaceChildren();for(const t of S.terms){const option=node('option','',t.name);option.value=t.id;term.append(option);}term.value=S.term;term.disabled=!S.user||S.loading;
+ $('#page-name').textContent=({home:roleNavigation()[0]?.[1]||'工作台',work:workLabel(),prepare:workLabel(),evidence:'事实来源',courses:'课程中心',resources:'教学资源',schedule:'教学安排',supervision:'督导记录',course:'课程空间',reader:'资料阅读'})[current]||'爱教学';setupQuickSearch();
+}
+function title(text,description,action){const h=node('div','page-heading');const copy=node('div');copy.append(node('h1','',text),node('p','',description));h.append(copy);if(action)h.append(action);return h;}
+function breadcrumb(items){const nav=node('nav','breadcrumbs');nav.setAttribute('aria-label','面包屑');items.forEach(([label,r],i)=>{if(i)nav.append(icon('chevron'));nav.append(r?routeLink(label,r):node('span','',label));});return nav;}
+function headerIcon(text,id){const n=node('div','icon-title');n.append(icon(id),node('span','',text));return n;}
+function resourceEntries(){const result=new Map();for(const o of S.offerings){for(const r of S.resources.get(o.id)||[]){if(!result.has(r.id))result.set(r.id,{...r,offerings:[]});result.get(r.id).offerings.push(o);}}return [...result.values()];}
+function statistics(){const resources=resourceEntries();return {courses:new Set(S.offerings.map(o=>o.course_id)).size,openings:S.offerings.length,resources:resources.length,available:resources.filter(r=>r.status==='available').length,records:[...S.records.values()].reduce((n,r)=>n+r.records.length,0)};}
+function courseCard(o){
+ const card=node('article','course-card '+theme(o));card.dataset.offering=o.id;
+ const cover=node('div','course-cover');cover.append(node('span','cover-code',o.course.code),icon(o.course_id==='C02'?'resources':o.course_id==='C03'?'supervision':'courses'),star(o));
+ const body=node('div','course-card-body');body.append(node('span','overline',o.course.department+' / '+o.course.credits+' 学分'),routeLink(o.course.name,'course/'+o.id+'/overview','course-title'),node('p','class-label',o.class_name));
+ const people=node('div','course-people');people.append(icon('person'),node('span','',o.teachers.join('、')||'教师未登记'));if(o.teacher_ids.length>1)people.append(badge('neutral','联合授课'));body.append(people);
+ const foot=node('div','course-card-foot');const r=S.resources.get(o.id);foot.append(node('span','',r?`${r.length} 份关联资料`:'资料暂不可用'),routeLink('进入课程','course/'+o.id+'/overview','enter-link'));card.append(cover,body,foot);return card;
+}
+function courseGrid(items){const n=node('div','course-grid');items.forEach(o=>n.append(courseCard(o)));return n;}
+function welcome(){const root=$('#page');root.replaceChildren();const hero=node('section','welcome');hero.append(node('span','brand-symbol','教'),node('h1','','让每门课程，都清楚可见。'),node('p','','课程安排、教学资料与督导记录，在同一个教学工作空间里有序连接。'),node('span','demo-label','教学演示 · 以下身份与数据均为模拟'));
+ const choices=node('div','role-choices');for(const [id,name,description,ico] of [['teacher-a','教师工作台','查找本人任课、查看教学安排、阅读课程资料。','courses'],['director','教研室主任','统览系内开课，核查课程资料与督导事实。','home'],['supervisor','教学督导','按开课查阅督导登记，追溯原始事实来源。','supervision']]){const b=button('',()=>switchUser(id),'role-choice');b.append(icon(ico),node('h2','',name),node('p','',description),node('span','text-link','进入工作空间'));choices.append(b);}hero.append(choices);root.append(hero);}
+function loading(){const root=$('#page');root.replaceChildren(title('正在准备工作空间','正在读取当前身份与学期的课程信息…'));const n=node('div','loading-grid');for(let i=0;i<3;i++)n.append(node('div','skeleton'));root.append(n);root.setAttribute('aria-busy','true');}
+async function switchUser(id){if(S.loading)return;const q=startRequest();S.loading=true;S.ready=false;S.user=null;S.offerings=[];S.resources.clear();S.records.clear();S.failures=[];S.query='';S.mode='all';S.resourceQuery='';S.resourceCourse='all';S.resourceStatus='all';S.recordQuery='';S.recordStart='';S.recordEnd='';S.workQuery='';S.workMode='all';S.inspectQuery='';S.prepareTab=0;shell();loading();
+ try{const d=await api('/api/demo-session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:id})});if(q.epoch!==S.epoch)return;if(d.user?.id!==id)throw new Error('身份确认不一致，请重试。');S.user=d.user;history.replaceState(null,'','#/home');await loadScope();}catch(e){if(q.epoch!==S.epoch)return;S.loading=false;S.ready=false;shell();$('#page').setAttribute('aria-busy','false');$('#page').replaceChildren(empty('身份切换未完成',e.message,button('重试身份确认',()=>switchUser(id),'button primary')));}}
+async function loadScope(){const q=startRequest();S.loading=true;S.ready=false;S.offerings=[];S.resources.clear();S.records.clear();S.failures=[];shell();loading();try{
+ const data=await api('/api/offerings?term_id='+encodeURIComponent(S.term),{signal:q.signal});if(q.epoch!==S.epoch)return;
+ const jobs=data.items.flatMap(o=>[{id:o.id,type:'resources'},...(canSupervise()?[{id:o.id,type:'supervision'}]:[])]);
+ const results=await Promise.allSettled(jobs.map(j=>api(`/api/offerings/${j.id}/${j.type}`,{signal:q.signal})));if(q.epoch!==S.epoch)return;S.offerings=data.items;
+ results.forEach((r,i)=>{const j=jobs[i];if(r.status==='rejected')S.failures.push(j);else if(j.type==='resources')S.resources.set(j.id,r.value.items);else S.records.set(j.id,r.value);});
+ S.loading=false;S.ready=true;S.loadedAt=new Date().toLocaleString('zh-CN',{hour12:false});shell();render();
+ }catch(e){if(e.name==='AbortError'||q.epoch!==S.epoch)return;S.loading=false;S.ready=false;shell();$('#page').setAttribute('aria-busy','false');$('#page').replaceChildren(empty('课程信息暂时不可用',e.message,button('重新加载',loadScope,'button primary')));}}
+function render(){shell();const root=$('#page');root.setAttribute('aria-busy',String(S.loading));if(S.loading)return;if(!S.user){welcome();return;}if(!S.ready)return;startRequest();root.replaceChildren();const [page,id,tab]=route();
+ const functions={home:renderHome,work:renderWork,courses:renderCourses,resources:renderResourceHub,schedule:renderSchedule,supervision:renderSupervision};
+ if(functions[page])functions[page]();else if(page==='course')renderCourse(id,tab||'overview');else if(page==='reader')renderReader(id,tab);else if(page==='prepare')renderPrepare(id);else if(page==='evidence')renderEvidence(id,tab);else root.append(empty('没有这个页面','从左侧导航选择课程或教学资料。',routeLink('返回工作台','home','button primary')));
+ 
+ if(S.failures.length&&!['course','reader'].includes(page)){const warn=notice('部分关联信息暂未读取成功，相关汇总仅包含已成功加载的数据。');warn.append(button('重新读取',loadScope,'text-button'));root.prepend(warn);}
+ $('#page').focus({preventScroll:true});scrollTo(0,0);
+}
+function filteredCourses(){const q=S.query.trim().toLocaleLowerCase();return S.offerings.filter(o=>[o.course.name,o.course.code,o.id,o.class_name,...o.teachers].join(' ').toLocaleLowerCase().includes(q)&&(S.mode==='all'||S.mode==='favorites'&&favorite(o.id)||S.mode==='joint'&&o.teacher_ids.length>1||S.mode==='single'&&o.teacher_ids.length===1)).sort((a,b)=>(S.sort==='name'?a.course.name:a.id).localeCompare(S.sort==='name'?b.course.name:b.id,'zh-CN',{numeric:true}));}
+function renderCourses(){const root=$('#page');root.replaceChildren(title(S.user.role==='teacher'?'我的课程':'课程中心','浏览当前学期的具体开课，进入课程空间查看教学内容。'));
+ const toolbar=node('div','toolbar');const search=input('搜索课程、编号、教学班或教师',S.query,value=>{S.query=value;draw();});search.className='search';const filter=select('课程筛选',[['all','全部开课'],['favorites','已收藏'],['joint','联合授课'],['single','单人授课']],S.mode,value=>{S.mode=value;draw();});const sort=select('课程排序',[['code','开课编号'],['name','课程名称']],S.sort,value=>{S.sort=value;draw();});const views=node('div','segmented');for(const [v,text]of [['cards','卡片视图'],['table','列表视图']]){const b=button('',()=>{S.view=v;draw();},'view-button');b.append(icon(v==='cards'?'grid':'list'));b.setAttribute('aria-label',text);b.dataset.view=v;views.append(b);}toolbar.append(search,filter,sort,views);root.append(toolbar);const result=node('p','result-count');result.setAttribute('role','status');const content=node('div');root.append(result,content);
+ function draw(){const items=filteredCourses();result.textContent=`${items.length} 次开课 / ${new Set(items.map(o=>o.course_id)).size} 门课程`;for(const b of views.children)b.setAttribute('aria-pressed',String(b.dataset.view===S.view));content.replaceChildren();if(!items.length){content.append(empty(S.offerings.length?'没有匹配的开课':'当前范围没有开课','更换学期、关键词或筛选条件。',button('清除筛选',()=>{S.query='';S.mode='all';search.value='';filter.value='all';draw();})));return;}if(S.view==='cards')content.append(courseGrid(items));else{const rows=items.map(o=>[routeLink(o.course.name,'course/'+o.id+'/overview','table-title'),o.course.code,o.class_name,o.teachers.join('、'),o.schedule,o.room,routeLink('进入课程','course/'+o.id+'/overview','text-link')]);content.append(table(['课程','编号','教学班','任课教师','教学时间','地点','操作'],rows));}}draw();
+}
+function table(headings,rows){const wrap=node('div','table-wrap');const t=node('table');const caption=node('caption','sr-only',headings.join('、'));t.append(caption);const thead=node('thead'),tr=node('tr');headings.forEach(h=>{const th=node('th','',h);th.scope='col';tr.append(th);});thead.append(tr);t.append(thead);const tbody=node('tbody');for(const row of rows){const tr=node('tr');for(const value of row){const td=node('td');td.append(value instanceof Node?value:document.createTextNode(value??'未登记'));tr.append(td);}tbody.append(tr);}t.append(tbody);wrap.append(t);return wrap;}
+function facts(o){const n=node('dl','facts');for(const [l,v]of [['课程编号',o.course.code],['开课编号',o.id],['教学班',o.class_name],['学分',o.course.credits+' 学分'],['任课教师',o.teachers.join('、')||'未登记'],['教学地点',o.room],['教学时间',o.schedule],['开课学期',o.term]]){const r=node('div');r.append(node('dt','',l),node('dd','',v));n.append(r);}return n;}
+function courseShell(o,active){const root=$('#page');root.append(breadcrumb([['工作台','home'],['课程中心','courses'],[o.course.name,null]]));const hero=node('section','course-banner '+theme(o));const copy=node('div');copy.append(node('p','',o.course.department+' / '+o.course.code+' / '+o.id),node('h1','',o.course.name),node('p','',o.class_name+'  ·  '+o.teachers.join('、')));const tools=node('div','course-banner-tools');const switcher=select('切换开课',S.offerings.map(x=>[x.id,x.course.name+' / '+x.class_name]),o.id,id=>go('course/'+id+'/'+active));tools.append(switcher,star(o));hero.append(copy,tools);root.append(hero);const tabs=node('nav','course-tabs');tabs.setAttribute('aria-label','课程内导航');for(const [id,label]of [['overview','课程概览'],['resources','教学资源'],...(canSupervise()?[['supervision','督导记录']]:[])]){const a=routeLink(label,'course/'+o.id+'/'+id);if(active===id)a.setAttribute('aria-current','page');tabs.append(a);}root.append(tabs);}
+function renderCourse(id,active){const root=$('#page'),o=S.offerings.find(o=>o.id===id);if(!o){root.append(empty('无法查阅这次开课','开课不在当前身份和学期的可见范围内。',routeLink('返回课程中心','courses','button primary')));return;}if(!['overview','resources','supervision'].includes(active)||active==='supervision'&&!canSupervise()){root.append(empty('当前页面不可用','请选择当前身份可用的课程功能。',routeLink('课程概览','course/'+id+'/overview','button')));return;}
+ save('recent',[o.id,...stored('recent').filter(x=>x!==o.id)].slice(0,8));courseShell(o,active);
+ if(active==='overview'){const columns=node('div','overview-layout');const main=node('div'),sidebar=node('aside');const intro=node('section','panel');intro.append(section('课程简介'),node('p','body-copy',o.course.description||'课程简介未提供。'));const info=node('section','panel');info.append(section('本次开课安排'),facts(o));main.append(intro,info);
+ const quick=node('section','panel');quick.append(section('课程内容'));const rr=S.resources.get(o.id);const a=routeLink('','course/'+id+'/resources','content-shortcut');a.append(icon('resources'),node('div','','教学资源'),node('strong','',rr?rr.length+' 份':'暂不可用'),icon('chevron'));quick.append(a);if(canSupervise()){const d=S.records.get(id),b=routeLink('','course/'+id+'/supervision','content-shortcut');b.append(icon('supervision'),node('div','','督导记录'),node('strong','',d?d.records.length+' 条':'暂不可用'),icon('chevron'));quick.append(b);quick.append(node('p','footnote',d?.data_state||'督导资料暂不可用'));}sidebar.append(quick);
+ const teaching=node('section','panel');teaching.append(section('教学团队'));for(const name of o.teachers){const p=node('div','teacher-row');p.append(node('span','teacher-avatar',name.slice(0,1)),node('strong','',name),node('span','muted','任课教师'));teaching.append(p);}sidebar.append(teaching);columns.append(main,sidebar);root.append(columns);
+ }else if(active==='resources'){root.append(title('课程资料','按课程共用与本次开课归类，资料权限随当前身份生效。'));renderResourceList(root,o);}else renderRecordContent(root,[o]);
+}
+function renderResourceList(root,o){const items=S.resources.get(o.id);if(!items){root.append(empty('资料暂未加载','重新读取本次开课的资料。',button('重新读取',loadScope,'button primary')));return;}if(!items.length){root.append(empty('暂无关联资料','这次开课尚未登记教学资料。'));return;}const toolbar=node('div','toolbar'),content=node('div');let query='',status='all';toolbar.append(input('查找本课资料',query,v=>{query=v;draw();}),select('资料访问状态',[['all','全部状态'],['available','可访问'],['broken','入口失效'],['no_entry','暂无入口'],['forbidden','权限不足']],status,v=>{status=v;draw();}));root.append(toolbar,content);
+ function draw(){content.replaceChildren();const filtered=items.filter(r=>[r.name,r.description,r.source||''].join(' ').includes(query)&&(status==='all'||r.status===status));if(!filtered.length){content.append(empty('没有匹配的资料','更换关键词或访问状态。'));return;}for(const scope of ['课程共用','本次开课']){const subset=filtered.filter(r=>r.scope===scope);if(!subset.length)continue;const group=node('details','resource-group');group.open=true;group.append(node('summary','',scope+'  /  '+subset.length+' 份'));for(const r of subset)group.append(resourceRow(r,o));content.append(group);}}draw();}
+function resourceRow(r,o){const row=node('article','file-row');row.dataset.resource=r.id;const file=node('span','file-icon');file.append(icon('resources'));const copy=node('div','file-copy');copy.append(routeLink(r.name,`reader/${o.id}/${r.id}`,'file-title'),node('p','',r.description),node('small','','来源：'+(r.source||'未提供')));const action=node('div','file-action');action.append(badge(r.status,r.status_label),routeLink('查看资料',`reader/${o.id}/${r.id}`,'text-link'));row.append(file,copy,action);return row;}
+function renderResourceHub(){const root=$('#page'),all=resourceEntries();root.append(title('教学资源','跨课程查找授权范围内的资料，共用资料按编号合并展示。'));const toolbar=node('div','toolbar'),results=node('div');toolbar.append(input('搜索资料名称、说明或来源',S.resourceQuery,v=>{S.resourceQuery=v;draw();}),select('所属课程',[['all','全部课程'],...[...new Map(S.offerings.map(o=>[o.course_id,[o.course_id,o.course.name]])).values()]],S.resourceCourse,v=>{S.resourceCourse=v;draw();}),select('访问状态',[['all','全部状态'],['available','可访问'],['broken','入口失效'],['no_entry','暂无入口'],['forbidden','权限不足']],S.resourceStatus,v=>{S.resourceStatus=v;draw();}));root.append(toolbar,results);
+ function draw(){const list=all.filter(r=>[r.name,r.description,r.source||''].join(' ').includes(S.resourceQuery)&&(S.resourceStatus==='all'||r.status===S.resourceStatus)&&(S.resourceCourse==='all'||r.offerings.some(o=>o.course_id===S.resourceCourse)));results.replaceChildren(node('p','result-count',`找到 ${list.length} 份资料`));if(!list.length){results.append(empty('暂无匹配资料','更换筛选条件，或进入课程查看登记情况。'));return;}const rows=list.map(r=>{const name=node('div');name.append(routeLink(r.name,`reader/${r.offerings[0].id}/${r.id}`,'table-title'),node('small','cell-sub',r.description));const openings=node('div','opening-links');for(const o of r.offerings)openings.append(routeLink(o.class_name,`course/${o.id}/resources`));return [name,r.offerings[0].course.name,openings,r.scope,badge(r.status,r.status_label),routeLink('查阅',`reader/${r.offerings[0].id}/${r.id}`,'text-link')];});results.append(table(['资料名称','课程','关联教学班','归属','访问状态','操作'],rows));}draw();}
+function dayIndex(o){return ['周一','周二','周三','周四','周五','周六','周日'].indexOf(o.schedule.match(/周[一二三四五六日]/)?.[0]);}
+function renderSchedule(){const root=$('#page');root.append(title('教学安排','按已登记的周内安排浏览；教学周范围以每次开课记录为准。'));if(!S.offerings.length){root.append(empty('本学期暂无教学安排','切换学期后查看其他开课。'));return;}const board=node('div','schedule-board');for(let day=0;day<7;day++){const dayCourses=S.offerings.filter(o=>dayIndex(o)===day);const col=node('section','day-column');col.append(node('h2','',['周一','周二','周三','周四','周五','周六','周日'][day]));if(!dayCourses.length)col.append(node('p','day-empty','无登记安排'));for(const o of dayCourses){const card=routeLink('','course/'+o.id+'/overview','schedule-course '+theme(o));card.append(node('span','',o.schedule.replace(/^周[一二三四五六日]\s*/,'')),node('h3','',o.course.name),node('p','',o.class_name),node('p','',o.room),node('small','',o.teachers.join('、')));col.append(card);}board.append(col);}root.append(board);const unknown=S.offerings.filter(o=>dayIndex(o)<0);if(unknown.length){root.append(section('未能识别周次的登记安排'));root.append(table(['课程','教学班','原始安排'],unknown.map(o=>[o.course.name,o.class_name,o.schedule])));}root.append(notice('这里展示常规教学安排，不推断具体日期、节假日调课或上课完成状态。'));}
+function renderSupervision(){
+ const root=$('#page');if(!canSupervise()){root.append(empty('当前身份无权查阅督导记录','请使用课程与资料功能。',routeLink('我的课程','courses','button')));return;}
+ root.append(title('督导记录','按课程、督导和登记日期查找事实，再进入来源页核对原文。'));
+ const controls=node('div','toolbar work-toolbar'),results=node('div');
+ const search=input('课程、教学班、督导或记录内容',S.recordQuery,v=>{S.recordQuery=v;draw();});
+ const dateInput=(label,key)=>{const n=node('input');n.type='date';n.setAttribute('aria-label',label);n.value=S[key]||'';n.onchange=()=>{S[key]=n.value;draw();};return n;};
+ const start=dateInput('开始日期','recordStart'),end=dateInput('结束日期','recordEnd');
+ controls.append(field('搜索记录',search),field('开始日期',start),field('结束日期',end),button('清除条件',()=>{S.recordQuery='';S.recordStart='';S.recordEnd='';search.value='';start.value='';end.value='';draw();}));root.append(controls,results);
+ function draw(){results.replaceChildren();if(S.recordStart&&S.recordEnd&&S.recordStart>S.recordEnd){results.append(notice('开始日期不能晚于结束日期，请调整日期范围。'));return;}
+ const q=S.recordQuery.trim().toLocaleLowerCase();const active=Boolean(q||S.recordStart||S.recordEnd);
+ const matches=(r,o)=>([o.course.name,o.class_name,r.observer,r.summary,r.source,r.id].join(' ').toLocaleLowerCase().includes(q))&&(!S.recordStart||r.date>=S.recordStart)&&(!S.recordEnd||r.date<=S.recordEnd);
+ const offerings=active?S.offerings.filter(o=>(S.records.get(o.id)?.records||[]).some(r=>matches(r,o))):S.offerings;
+ const count=offerings.reduce((sum,o)=>sum+(S.records.get(o.id)?.records||[]).filter(r=>matches(r,o)).length,0);const summary=node('p','result-count',`当前筛选 ${count} 条已读取记录`);summary.setAttribute('role','status');results.append(summary);
+ if(!offerings.length){results.append(empty('没有匹配的督导记录','尝试扩大日期范围或清除搜索条件；没有匹配结果不代表未开展督导。'));return;}
+ renderRecordContent(results,offerings,active?matches:null);
+ }draw();
+}
+function renderRecordContent(root,offerings,recordFilter=null){if(!offerings.length){root.append(empty('暂无匹配的开课','更换学期或关键词再查询。'));return;}for(const o of offerings){const d=S.records.get(o.id);const block=node('section','panel record-block');block.append(section(o.course.name+' / '+o.class_name,routeLink('课程空间','course/'+o.id+'/overview','text-link')));if(!d){block.append(notice('这次开课的督导资料暂不可用。'),button('重新读取',loadScope));root.append(block);continue;}block.append(node('p','record-state',d.data_state));for(const r of d.records.filter(r=>!recordFilter||recordFilter(r,o))){const row=node('article','record-row');row.dataset.record=r.id;row.append(node('time','record-date',r.date));const text=node('div');text.append(node('h3','',r.summary),node('p','',r.observer+' / '+r.source+' / '+r.id));row.append(text,routeLink('查阅来源',`evidence/${o.id}/${r.id}`,'text-link'));block.append(row);}if(!d.records.length)block.append(node('p','subtle-copy','未查询到已登记记录，请结合上方数据状态理解。'));block.append(node('p','footnote','未查询到督导记录不等于未督导。本页不计算覆盖率或教学评分。'));root.append(block);}}
+async function renderReader(offeringId,resourceId){const root=$('#page'),o=S.offerings.find(o=>o.id===offeringId);const items=S.resources.get(offeringId);const r=items?.find(r=>r.id===resourceId);if(!o||!r){root.append(empty('无法查阅这份资料','资料不在当前开课可见范围，或关联信息未能读取。',routeLink('返回资源库','resources','button')));return;}root.append(breadcrumb([['课程中心','courses'],[o.course.name,'course/'+o.id+'/overview'],['教学资源','course/'+o.id+'/resources'],[r.name,null]]));const tools=node('div','reader-toolbar');const back=routeLink('返回课程资料','course/'+o.id+'/resources','button');back.prepend(icon('back'));const toggle=button('收起资料目录',()=>{const hidden=layout.classList.toggle('reader-focused');toggle.textContent=hidden?'显示资料目录':'收起资料目录';toggle.setAttribute('aria-expanded',String(!hidden));},'button');toggle.setAttribute('aria-expanded','true');toggle.setAttribute('aria-controls','reader-index');tools.append(back,node('span','muted',o.class_name+' / '+o.id),toggle);root.append(tools);const layout=node('div','reader-layout'),index=node('nav','reader-index');index.id='reader-index';index.setAttribute('aria-label','本课资料目录');index.append(node('h2','','本课资料'));for(const scope of ['课程共用','本次开课']){const sub=items.filter(x=>x.scope===scope);if(!sub.length)continue;index.append(node('h3','',scope));for(const x of sub){const a=routeLink('',`reader/${o.id}/${x.id}`,'reader-item');a.append(icon('resources'),node('span','',x.name));if(x.id===r.id)a.setAttribute('aria-current','page');index.append(a);}}
+ const paper=node('article','reading-paper');paper.append(node('p','overline',r.scope+' / '+r.id),node('h1','',r.name));const meta=node('div','reading-meta');meta.append(badge(r.status,r.status_label),node('span','','来源：'+(r.source||'未提供')));paper.append(meta,node('p','reading-description',r.description));const body=node('div','reading-content');body.setAttribute('aria-live','polite');paper.append(body);const pagination=node('div','reading-pagination'),i=items.indexOf(r);if(i>0)pagination.append(routeLink('上一份资料',`reader/${o.id}/${items[i-1].id}`,'button'));pagination.append(node('span','muted',`${i+1} / ${items.length}`));if(i<items.length-1)pagination.append(routeLink('下一份资料',`reader/${o.id}/${items[i+1].id}`,'button'));if(r.url)pagination.append(external('新窗口打开',r.url));paper.append(pagination);layout.append(index,paper);root.append(layout);
+ if(!r.url){const messages={forbidden:'当前身份没有正文访问权限，可返回课程查阅其他资料。',broken:'已登记的资料入口不可用，请由资料负责人核对。',no_entry:'资料尚未登记访问入口，当前仅能查看资料信息。'};body.append(empty(r.status_label,messages[r.status]||'资料暂不可读取。'));return;}
+ const q={epoch:S.epoch,signal:S.controller.signal};body.textContent='正在读取资料正文…';body.setAttribute('aria-busy','true');try{const response=await fetch(r.url,{credentials:'same-origin',signal:q.signal});if(!response.ok)throw new Error('资料正文暂时无法读取，请重试。');if(!(response.headers.get('content-type')||'').startsWith('text/plain')){body.replaceChildren(notice('该格式请使用下方“新窗口打开”查看。'));return;}const text=await response.text();if(q.epoch!==S.epoch)return;body.replaceChildren(node('pre','document-text',text));}catch(e){if(e.name==='AbortError'||q.epoch!==S.epoch)return;body.replaceChildren(empty('读取失败',e.message,button('重试读取',render,'button primary')));}finally{if(q.epoch===S.epoch)body.setAttribute('aria-busy','false');}
+}
+async function init(){try{const data=await api('/api/bootstrap');S.users=data.users;S.terms=data.terms;S.term=data.terms[0].id;S.user=data.user;$('#identity').onchange=e=>switchUser(e.target.value);$('#term').onchange=e=>{S.term=e.target.value;S.resourceCourse='all';S.recordQuery='';S.recordStart='';S.recordEnd='';S.workQuery='';S.workMode='all';S.inspectQuery='';S.prepareTab=0;history.replaceState(null,'','#/home');loadScope();};shell();if(S.user)await loadScope();else welcome();}catch(e){$('#page').replaceChildren(empty('暂时无法连接工作空间',e.message,button('重新连接',init,'button primary')));}}
+window.addEventListener('hashchange',render);
+$('.skip').addEventListener('click',event=>{event.preventDefault();$('#page').focus();});
+$('#help').addEventListener('click',()=>$('#help-dialog').showModal());$('#close-help').addEventListener('click',()=>$('#help-dialog').close());
+/* Role workflows: derived views of authorized records; never write school records. */
+function workLabel(){return {teacher:'课前准备',director:'开课核查',supervisor:'督导查阅'}[S.user?.role]||'课程工作';}
+function workDescription(){return {teacher:'先确认教学安排，再查阅本次开课资料。',director:'按教学班核对课程、安排与资料，定位需要进一步核实的信息。',supervisor:'按具体开课查阅安排、教学资料和督导来源，做好查阅准备。'}[S.user.role];}
+function resourceSummary(o){const items=S.resources.get(o.id);if(!items)return '未读取';return `${items.filter(r=>r.status==='available').length} 可访问 / ${items.length} 已登记`;}
+function checksFor(o){
+ const issues=[],add=(kind,label,detail,target)=>issues.push({kind,label,detail,target});
+ if(!o.course.description?.trim())add('info','课程简介未登记','先向课程信息维护人员核实简介。','course/'+o.id+'/overview');
+ if(!o.schedule?.trim()||!o.room?.trim()||!o.teacher_ids.length)add('info','安排信息不完整','教学时间、地点或任课教师有空项，请核实开课登记。','course/'+o.id+'/overview');
+ const rs=S.resources.get(o.id);
+ if(!rs)add('unknown','资源未读取','重新读取后再判断资料情况。','course/'+o.id+'/resources');
+ else if(!rs.length)add('info','可见范围无资料','未返回关联资料；不表示这门课没有教学资料。','course/'+o.id+'/resources');
+ else for(const r of rs){
+  if(r.status==='broken')add('resource','资料入口失效',r.name+'：请向资料维护人员核对文件入口。',`reader/${o.id}/${r.id}`);
+  else if(r.status==='no_entry')add('resource','资料暂无入口',r.name+'：目前只能查看登记信息。',`reader/${o.id}/${r.id}`);
+  else if(r.status==='forbidden')add('permission','资料访问受限',r.name+'：当前身份没有正文权限，不代表资料损坏。',`reader/${o.id}/${r.id}`);
+  if(r.status!=='forbidden'&&(!r.source?.trim()||!r.description?.trim()))add('info','资料说明待核实',r.name+'：来源或说明未完整登记。',`reader/${o.id}/${r.id}`);
+ }
+ if(canSupervise()){
+  const d=S.records.get(o.id);
+  if(!d)add('unknown','督导资料未读取','重新读取后再判断登记情况。','course/'+o.id+'/supervision');
+  else if(!d.records.length)add('record','未查到督导记录',d.data_state||'登记状态未提供；不能推断是否已督导。','course/'+o.id+'/supervision');
+ }
+ return issues;
+}
+function workCallout(){const box=node('section','work-callout'),copy=node('div');copy.append(node('h2','',workLabel()),node('p','',workDescription()));const controls=node('div','work-actions');controls.append(routeLink('进入'+workLabel(),'work','button primary'),button('刷新课程数据',loadScope,'button'));box.append(copy,controls);return box;}
+function exportCsv(name,headers,rows){
+ const cell=value=>{let s=String(value??'未登记');if(/^[\s\uFEFF]*[=+@-]/.test(s))s="'"+s;return '"'+s.replaceAll('"','""')+'"';};
+ const metadata=['模拟数据',termName(),S.user.name+' / '+roles[S.user.role],S.loadedAt||'未读取'];
+ const text='\uFEFF'+[['数据性质','学期','当前身份','读取时间',...headers],...rows.map(row=>[...metadata,...row])].map(row=>row.map(cell).join(',')).join('\r\n');
+ const url=URL.createObjectURL(new Blob([text],{type:'text/csv;charset=utf-8'}));const a=link('',url);a.download=name+'.csv';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
+ $('#toast').textContent=`已导出 ${rows.length} 行当前筛选结果。`;
+}
+function renderWork(){
+ const root=$('#page');root.append(title(workLabel(),workDescription(),button('刷新数据',loadScope)));
+ const bar=node('div','toolbar work-toolbar'),result=node('div'),count=node('p','result-count');count.setAttribute('role','status');
+ let rows=[];
+ const q=input('课程、教学班、教师',S.workQuery||'',v=>{S.workQuery=v;draw();});
+ const mode=select('关注范围',[['all','全部开课'],['attention','需要核对的信息'],['favorites','我的收藏']],S.workMode||'all',v=>{S.workMode=v;draw();});
+ const exp=button('导出当前清单',()=>exportCsv(workLabel()+'_'+S.term,['开课编号','课程编号','课程','教学班','任课教师','教学时间','地点','资料情况',...(canSupervise()?['督导登记状态','已读取记录数']:[]),'需核对事项'],rows.map(o=>[o.id,o.course.code,o.course.name,o.class_name,o.teachers.join('、'),o.schedule,o.room,resourceSummary(o),...(canSupervise()?[S.records.get(o.id)?.data_state??'未读取',S.records.get(o.id)?.records.length??'未知']:[]),checksFor(o).map(x=>x.label+'：'+x.detail).join('；')||'当前检查范围内未发现待核对项'])));
+ bar.append(field('查找开课',q),field('关注范围',mode),exp);root.append(bar,count,result);
+ root.append(node('p','footnote','信息提醒来自当前可见登记，不是审核结论。资料访问受限与资料损坏分别显示。'+(canSupervise()?' 未查到记录不等于未督导。':'')));
+ function draw(){rows=S.offerings.filter(o=>[o.course.name,o.course.code,o.id,o.class_name,...o.teachers].join(' ').toLocaleLowerCase().includes((S.workQuery||'').trim().toLocaleLowerCase())&&((S.workMode||'all')==='all'||S.workMode==='attention'&&checksFor(o).length>0||S.workMode==='favorites'&&favorite(o.id))).sort((a,b)=>Number(favorite(b.id))-Number(favorite(a.id))||a.id.localeCompare(b.id));
+ count.textContent=`${rows.length} 次开课 · ${new Set(rows.map(o=>o.course_id)).size} 门课程`+(S.loadedAt?' · 读取于 '+S.loadedAt:'');exp.disabled=!rows.length;result.replaceChildren();
+ if(!rows.length){result.append(empty(S.offerings.length?'没有符合条件的开课':'当前学期没有可见开课','可清除筛选，或在顶部更换学期。',button('清除筛选',()=>{S.workQuery='';S.workMode='all';q.value='';mode.value='all';draw();})) );return;}
+ if(S.user.role==='director'){
+  result.append(table(['课程 / 教学班','任课与安排','资源情况','督导登记状态','需核对事项','操作'],rows.map(o=>{const identity=node('div');identity.append(routeLink(o.course.name,'prepare/'+o.id,'table-title'),node('small','cell-sub',o.class_name+' / '+o.id));const arrangement=node('div');arrangement.append(node('span','',o.teachers.join('、')),node('small','cell-sub',o.schedule+' / '+o.room));const issues=checksFor(o),states=node('div','check-badges');[...new Set(issues.map(i=>i.label))].forEach(t=>states.append(badge('neutral',t)));if(!issues.length)states.append(node('span','','当前检查无待核对项'));return [identity,arrangement,resourceSummary(o),S.records.get(o.id)?.data_state||'未读取',states,routeLink('查看核查项','prepare/'+o.id,'button')];})));
+ }else{
+  const list=node('div','work-course-list');for(const o of rows){const row=node('article','work-course '+theme(o)),head=node('div','work-course-head');const text=node('div');text.append(node('p','overline',o.course.code+' / '+o.id),routeLink(o.course.name,'prepare/'+o.id,'table-title'),node('p','',o.class_name+' · '+o.teachers.join('、')));head.append(text,star(o));row.append(head,node('p','work-arrangement',o.schedule+' / '+o.room));const data=node('div','work-facts');data.append(node('span','',resourceSummary(o)));if(canSupervise())data.append(node('span','',S.records.get(o.id)?.data_state||'督导资料未读取'));row.append(data);const issues=checksFor(o);row.append(node('p','work-hint',issues.length?`需关注：${[...new Set(issues.map(x=>x.label))].join('、')}`:'当前可见信息未发现待核对项'),routeLink(S.user.role==='teacher'?'进入课前准备':'查阅开课档案','prepare/'+o.id,'button primary'));list.append(row);}result.append(list);
+ }
+ }draw();
+}
+function renderPrepare(id){
+ const root=$('#page'),o=S.offerings.find(x=>x.id===id);if(!o){root.append(empty('当前范围无法查阅这次开课','请从当前身份可见的开课清单进入。',routeLink('返回'+workLabel(),'work','button')));return;}
+ root.append(breadcrumb([[workLabel(),'work'],[o.course.name+' / '+o.class_name,null]]));
+ const actions=node('div','work-actions');actions.append(select('准备另一教学班',S.offerings.map(x=>[x.id,x.course.name+' / '+x.class_name]),o.id,v=>go('prepare/'+v)),button('刷新数据',loadScope));
+ root.append(title(o.course.name,o.class_name+' / '+o.id+' / '+termName(),actions));
+ const layout=node('div','preparation-layout'),main=node('div'),aside=node('aside','preparation-side');
+ const arrangement=node('section','panel');arrangement.append(section('教学安排与课程信息',routeLink('打开课程空间','course/'+id+'/overview','text-link')),facts(o),node('p','subtle-copy',o.course.description||'课程简介未登记，请向课程信息维护人员核实。'));main.append(arrangement);
+ const resources=node('section','panel');resources.append(section('本次开课资料',routeLink('资源目录','course/'+id+'/resources','text-link')));
+ const rs=S.resources.get(id);if(!rs)resources.append(notice('资料暂未读取，不能判断资源数量。'),button('重新读取',loadScope));else if(!rs.length)resources.append(node('p','subtle-copy','当前授权范围未返回关联资料。'));else for(const r of rs)resources.append(resourceRow(r,o));main.append(resources);
+ if(canSupervise()){const records=node('section');renderRecordContent(records,[o]);main.append(records);}
+ const issues=node('section','panel');issues.append(section('查阅时需注意'));const items=checksFor(o);if(!items.length)issues.append(node('p','subtle-copy','在当前检查范围内未发现待核对项，不代表已经完成人工审核。'));else for(const item of items){const row=node('details','check-item'),heading=node('summary','',item.label);row.append(heading,node('p','',item.detail),routeLink('查看对应信息',item.target,'text-link'));issues.append(row);}aside.append(issues);
+ const note=node('section','panel personal-note');note.append(section('我的查阅备忘'));const area=node('textarea');area.rows=5;area.maxLength=2000;area.setAttribute('aria-label','本机查阅备忘');area.placeholder='记录下次需要核对的内容…';area.value=stored('note:'+id)[0]||'';const status=node('p','footnote');status.setAttribute('role','status');const saveButton=button('保存到本机',()=>{try{localStorage.setItem(`aijiaoxue:note:${id}:${S.user.id}:${S.term}`,JSON.stringify([area.value]));status.textContent='已保存到当前浏览器。';}catch{status.textContent='保存失败，请复制备忘后妥善保存。';}},'button');area.addEventListener('input',()=>{status.textContent='有未保存的备忘';});note.append(area,saveButton,status,node('p','footnote','仅本机、当前账户与学期可见；不作为团队审核记录。请勿填写敏感个人信息。'));aside.append(note);prepareTabs(main);layout.append(main,aside);root.append(layout);
+}
+async function renderEvidence(offeringId,recordId){
+ const root=$('#page'),o=S.offerings.find(x=>x.id===offeringId),d=S.records.get(offeringId),r=d?.records.find(x=>x.id===recordId);
+ if(!canSupervise()||!o||!r){root.append(empty('当前范围无法查阅这条来源','请使用有权查阅的身份，从开课记录进入。',routeLink('返回工作台','home','button')));return;}
+ root.append(breadcrumb([[workLabel(),'work'],[o.course.name,'prepare/'+o.id],[r.summary,null]]),title('督导事实来源',o.class_name+' / '+r.id,routeLink('返回开课查阅','prepare/'+o.id,'button')));
+ const paper=node('article','reading-paper evidence-paper');paper.append(node('h2','',r.summary),node('p','reading-description',r.date+' / '+r.observer+' / '+r.source),notice(d.data_state));const body=node('div','reading-content');body.setAttribute('aria-live','polite');body.setAttribute('aria-busy','true');body.textContent='正在读取来源…';paper.append(body,node('p','footnote','仅展示已登记事实及来源，不据此计算教学评分或督导覆盖率。'));root.append(paper);
+ const q={epoch:S.epoch,signal:S.controller.signal};try{const response=await fetch(r.source_url,{credentials:'same-origin',signal:q.signal});if(!response.ok)throw new Error('来源暂时无法读取。');if(!(response.headers.get('content-type')||'').startsWith('text/plain'))throw new Error('当前来源格式不支持页内阅读。');const text=await response.text();if(q.epoch!==S.epoch)return;body.replaceChildren(node('pre','document-text',text));}catch(e){if(e.name==='AbortError'||q.epoch!==S.epoch)return;body.replaceChildren(empty('来源读取未完成',e.message,button('重新读取来源',render,'button primary')));}finally{if(q.epoch===S.epoch)body.setAttribute('aria-busy','false');}
 }
 
-async function api(url, options = {}) {
-  const response = await fetch(url, {credentials: "same-origin", ...options});
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.message || "请求未成功，请重试。");
-  return data;
+function roleNavigation(){
+ if(S.user?.role==='teacher')return [['home','我的教学'],['courses','任课目录'],['work','课前准备'],['schedule','教学安排'],['resources','我的资料']];
+ if(S.user?.role==='director')return [['home','开课总览'],['work','信息核查'],['courses','课程档案'],['resources','资源台账'],['supervision','督导登记']];
+ if(S.user?.role==='supervisor')return [['home','查阅工作台'],['supervision','事实检索'],['work','开课档案'],['resources','关联资料'],['schedule','教学安排']];
+ return [];
+}
+function roleHeading(name,subtitle){const actions=node('div','work-actions');actions.append(node('span','scope-pill',termName()),button('刷新',loadScope,'button'));return title(name,subtitle,actions);}
+function renderHome(){
+ document.body.dataset.role=S.user.role;
+ if(S.user.role==='teacher')renderTeacherHome();
+ else if(S.user.role==='director')renderDirectorHome();
+ else renderSupervisorHome();
+}
+function teachingRow(o){
+ const row=node('article','teaching-row '+theme(o));row.dataset.offering=o.id;
+ const mark=node('div','subject-mark',o.course.code),body=node('div','teaching-body');
+ body.append(node('p','overline',o.class_name+' / '+o.id),routeLink(o.course.name,'prepare/'+o.id,'teaching-title'),node('p','',o.schedule+'  /  '+o.room));
+ const foot=node('div','teaching-meta');foot.append(node('span','',o.teachers.join('、')),node('span','',resourceSummary(o)));body.append(foot);
+ const actions=node('div','teaching-actions');actions.append(star(o),routeLink('准备本课','prepare/'+o.id,'button primary'),routeLink('打开资料','course/'+o.id+'/resources','text-link'));row.append(mark,body,actions);return row;
+}
+function compactAgenda(){const box=node('section','panel agenda-compact');box.append(section('周内教学安排',routeLink('完整安排','schedule','text-link')));
+ for(const o of [...S.offerings].sort((a,b)=>dayIndex(a)-dayIndex(b))){const a=routeLink('','prepare/'+o.id,'agenda-line');a.append(node('span','day-token',o.schedule.match(/周[一二三四五六日]/)?.[0]||'未登记'));const t=node('div');t.append(node('strong','',o.course.name),node('small','',o.class_name),node('small','',o.schedule));a.append(t);box.append(a);}if(!S.offerings.length)box.append(node('p','subtle-copy','当前没有登记安排。'));return box;}
+function renderTeacherHome(){
+ const root=$('#page');root.append(roleHeading('我的教学',S.user.name+'，从本学期任课开始，安排与资料随手可查。'));
+ const layout=node('div','teacher-desk'),main=node('div'),side=node('aside');
+ main.append(section('我的课程',routeLink('搜索全部任课','courses','text-link')));
+ if(S.offerings.length){const courses=node('div','teaching-list');[...S.offerings].sort((a,b)=>Number(favorite(b.id))-Number(favorite(a.id))).forEach(o=>courses.append(teachingRow(o)));main.append(courses);}else main.append(empty('本学期暂无开课','可在顶部切换学期，查阅其他任课安排。'));
+ const materials=node('section','panel desk-materials');materials.append(section('可直接阅读的资料',routeLink('进入我的资料','resources','text-link')));
+ const rs=resourceEntries().filter(r=>r.status==='available');for(const r of rs.slice(0,4)){const a=routeLink('',`reader/${r.offerings[0].id}/${r.id}`,'material-shortcut');a.append(icon('resources'));const t=node('div');t.append(node('strong','',r.name),node('small','',r.offerings.map(o=>o.class_name).join('、')));a.append(t,icon('chevron'));materials.append(a);}if(!rs.length)materials.append(node('p','subtle-copy','当前可见范围没有已读取的可访问资料。'));main.append(materials);
+ side.append(compactAgenda());const attention=node('section','desk-note');const affected=S.offerings.filter(o=>checksFor(o).length);attention.append(icon('work'),node('h2','','课前核对'),node('p','',affected.length?`${affected.length} 次开课存在需核对的信息，进入准备页查看具体资料与原因。`:'当前检查范围内没有待核对项。'),routeLink('查看准备清单','work','button'));side.append(attention);layout.append(main,side);root.append(layout);
+}
+function renderDirectorHome(){
+ const root=$('#page'),stats=statistics();root.append(roleHeading('开课总览','把教学班、资料和登记状态放在同一张图景里。'));
+ const strip=node('section','metric-strip director-totals');strip.setAttribute('aria-label','当前授权范围概况');for(const [n,label]of [[stats.courses,'门课程'],[stats.openings,'次开课'],[stats.resources,'份资料'],[stats.records,'条督导记录']]){const m=node('div','metric');m.append(node('strong','',n),node('span','',label));strip.append(m);}root.append(strip);
+ const top=node('div','director-summary'),distribution=node('section','panel');distribution.append(section('资料访问分布',node('span','muted','按资料编号去重')));
+ const resources=resourceEntries();for(const [id,label]of [['available','可访问'],['broken','入口失效'],['no_entry','暂无入口'],['forbidden','权限不足']]){const n=resources.filter(r=>r.status===id).length;const b=button('',()=>{S.resourceStatus=id;S.resourceCourse='all';S.resourceQuery='';go('resources');},'distribution-row '+id);const track=node('progress');track.max=Math.max(resources.length,1);track.value=n;track.setAttribute('aria-label',label+'资料数');b.append(node('span','',label),track,node('strong','',n+' 份'),icon('chevron'));distribution.append(b);}distribution.append(node('p','footnote',S.failures.some(f=>f.type==='resources')?'仅含成功读取的资源，未读取部分不计入。':'点击一行查看相应资料；课程共用资料不重复计数。'));
+ const queue=node('section','director-attention');queue.append(node('h2','','需要核对的开课'));const affected=S.offerings.filter(o=>checksFor(o).length);for(const o of affected.slice(0,3)){const a=routeLink('','prepare/'+o.id,'attention-line');a.append(node('strong','',o.course.name),node('span','',o.class_name),node('small','',[...new Set(checksFor(o).map(x=>x.label))].join(' / ')),icon('chevron'));queue.append(a);}if(!affected.length)queue.append(node('p','','当前检查范围内没有待核对项。'));queue.append(button('查看全部核查项',()=>{S.workQuery='';S.workMode='attention';go('work');},'button'));top.append(distribution,queue);root.append(top);
+ root.append(section('开课登记一览',routeLink('完整核查与导出','work','text-link')),table(['课程 / 教学班','任课教师','教学安排','资料情况','操作'],S.offerings.map(o=>{const t=node('div');t.append(routeLink(o.course.name,'prepare/'+o.id,'table-title'),node('small','cell-sub',o.class_name+' / '+o.id));return[t,o.teachers.join('、'),o.schedule,resourceSummary(o),routeLink('核查信息','prepare/'+o.id,'button')];})));
+ if(!S.offerings.length)root.append(empty('本学期暂无开课','可在顶部切换学期。'));
+}
+function renderSupervisorHome(){
+ const root=$('#page');root.append(roleHeading('查阅工作台','选定具体开课，在同一处查看教学安排、资料与已登记事实。'));
+ const layout=node('div','inspection-layout'),catalog=node('section','inspection-index'),right=node('section','inspection-detail');
+ const search=input('课程、教学班或教师',S.inspectQuery||'',v=>{S.inspectQuery=v;drawList();});catalog.append(field('查找查阅对象',search));const count=node('p','result-count');count.setAttribute('role','status');const list=node('div','inspection-list');catalog.append(count,list);
+ const selected=S.offerings.find(o=>o.id===route()[1])||S.offerings[0],active=['arrangement','resources','records'].includes(route()[2])?route()[2]:'arrangement';
+ function drawList(){const q=(S.inspectQuery||'').trim().toLocaleLowerCase(),items=S.offerings.filter(o=>[o.course.name,o.class_name,...o.teachers].join(' ').toLocaleLowerCase().includes(q));count.textContent=`${items.length} 次开课`;list.replaceChildren();for(const o of items){const a=routeLink('','home/'+o.id+'/'+active,'inspection-item');if(o.id===selected?.id)a.setAttribute('aria-current','true');a.append(node('small','',o.course.code+' / '+o.id),node('strong','',o.course.name),node('span','',o.class_name),node('small','',o.teachers.join('、')));list.append(a);}if(!items.length)list.append(node('p','subtle-copy','没有匹配对象，请更换关键词。'));}drawList();
+ if(selected){const header=node('div','inspection-heading');header.append(node('span','file-tab','开课档案'),node('h2','',selected.course.name),node('p','',selected.class_name+' / '+selected.id),routeLink('打开完整档案与备忘','prepare/'+selected.id,'text-link'));right.append(header);
+ const tabs=node('nav','dossier-tabs');tabs.setAttribute('aria-label','开课档案内容');for(const [key,label]of [['arrangement','教学安排'],['resources','教学资料'],['records','督导记录']]){const a=routeLink(label,'home/'+selected.id+'/'+key);if(key===active)a.setAttribute('aria-current','page');tabs.append(a);}right.append(tabs);
+ const body=node('div','inspection-body');if(active==='arrangement'){body.append(facts(selected),node('p','course-intro',selected.course.description||'课程简介未登记。'));const state=S.records.get(selected.id);body.append(notice('督导资料状态：'+(state?.data_state||'未读取')));}else if(active==='resources'){const rs=S.resources.get(selected.id);if(!rs)body.append(notice('资料未读取，请刷新后再试。'));else if(!rs.length)body.append(empty('当前可见范围没有资料','未返回关联资料不等于课程没有教学资料。'));else rs.forEach(r=>body.append(resourceRow(r,selected)));}else renderRecordContent(body,[selected]);right.append(body);
+ }else right.append(empty('本学期暂无开课','选择其他学期再开始查阅。'));layout.append(catalog,right);root.append(layout);
+}
+function prepareTabs(main){
+ const sections=[...main.children],labels=['教学安排','教学资料',...(canSupervise()?['督导记录']:[])],tabs=node('div','dossier-tabs');tabs.setAttribute('role','group');tabs.setAttribute('aria-label','切换查阅内容');let active=S.prepareTab||0;if(active>=sections.length)active=0;
+ const buttons=labels.map((label,i)=>button(label,()=>{S.prepareTab=i;show(i);},'dossier-tab'));
+ function show(i){sections.forEach((s,index)=>s.hidden=index!==i);buttons.forEach((b,index)=>b.setAttribute('aria-pressed',String(index===i)));}
+ buttons.forEach(b=>tabs.append(b));main.prepend(tabs);show(active);
 }
 
-function notice(message = "") {
-  $("#notice").textContent = message;
-  $("#notice").classList.toggle("hidden", !message);
+function setupQuickSearch(){
+ if(!$('#quick-search')){const b=button('',openQuickSearch,'quick-search-trigger');b.id='quick-search';b.setAttribute('aria-label','快捷搜索课程或资料');b.setAttribute('aria-haspopup','dialog');b.setAttribute('aria-keyshortcuts','Control+K Meta+K');b.append(icon('search'),node('span','','快捷搜索'),node('kbd','','Ctrl K'));$('.location-label').append(b);}
+ $('#quick-search').disabled=!S.ready||S.loading;
 }
+function openQuickSearch(){
+ if(!S.ready||S.loading||!S.user)return;
+ let dialog=$('#search-dialog');if(dialog)dialog.remove();dialog=node('dialog','search-dialog');dialog.id='search-dialog';dialog.setAttribute('aria-labelledby','search-title');const heading=node('div','help-head'),h=node('h2','','查找课程或资料');h.id='search-title';heading.append(h,button('关闭',()=>dialog.close(),'button'));dialog.append(heading);
+ const count=node('p','result-count');count.setAttribute('role','status');const results=node('div','quick-results');const search=input('课程名称、编号、教学班或资料名称','',draw);search.id='quick-search-input';dialog.append(field('搜索当前身份与学期的可见内容',search),count,results);document.body.append(dialog);
+ function draw(){const q=search.value.trim().toLocaleLowerCase();const items=[...S.offerings.filter(o=>[o.id,o.course.code,o.course.name,o.class_name,...o.teachers].join(' ').toLocaleLowerCase().includes(q)).map(o=>({name:o.course.name,meta:'开课 / '+o.class_name+' / '+o.id,target:'prepare/'+o.id,type:'courses'})),...resourceEntries().filter(r=>[r.id,r.name,r.description].join(' ').toLocaleLowerCase().includes(q)).map(r=>({name:r.name,meta:'资料 / '+r.scope+' / '+r.status_label,target:`reader/${r.offerings[0].id}/${r.id}`,type:'resources'}))];results.replaceChildren();count.textContent=items.length?`找到 ${items.length} 项`+(items.length>12?'，显示前12项；可补充关键词。':''):'没有匹配结果，请更换关键词。';for(const item of items.slice(0,12)){const b=button('',()=>{dialog.close();go(item.target);},'quick-result');const t=node('div');t.append(node('strong','',item.name),node('small','',item.meta));b.append(icon(item.type),t,icon('chevron'));results.append(b);}}
+ dialog.addEventListener('keydown',e=>{const options=[search,...results.querySelectorAll('button')];if(!['ArrowDown','ArrowUp'].includes(e.key)||!options.includes(document.activeElement))return;e.preventDefault();const i=options.indexOf(document.activeElement);options[(i+(e.key==='ArrowDown'?1:options.length-1))%options.length].focus();});
+ dialog.addEventListener('close',()=>$('#quick-search')?.focus());dialog.showModal();draw();search.focus();
+}
+window.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'&&S.ready){e.preventDefault();if(!$('#search-dialog')?.open)openQuickSearch();}});
 
-function empty(title, text) {
-  const box = el("div", "empty");
-  box.append(el("h3", "", title), el("p", "", text));
-  return box;
-}
-
-function beginQuery() {
-  if (state.controller) state.controller.abort();
-  state.controller = new AbortController();
-  state.epoch += 1;
-  return {epoch: state.epoch, signal: state.controller.signal};
-}
-
-function renderList() {
-  const list = $("#offering-list");
-  list.replaceChildren();
-  $("#offering-count").textContent = state.offerings.length;
-  if (!state.offerings.length) {
-    list.append(empty("暂无开课", "当前学期与身份范围内没有开课，请选择其他学期或模拟身份。"));
-    return;
-  }
-  for (const offering of state.offerings) {
-    const button = el("button", "offering" + (offering.id === state.selected ? " selected" : ""));
-    button.type = "button";
-    button.dataset.offering = offering.id;
-    button.setAttribute("aria-pressed", String(offering.id === state.selected));
-    const top = el("div", "offering-top");
-    top.append(el("span", "course-code", offering.course.code + " · " + offering.id), el("span", "offering-arrow", "↗"));
-    const bottom = el("div", "offering-bottom");
-    bottom.append(el("span", "pill", offering.class_name), el("span", "", offering.teacher_ids.length > 1 ? "联合授课" : "独立开课"));
-    button.append(top, el("h3", "", offering.course.name), el("p", "", offering.teachers.join(" / ")), bottom);
-    button.addEventListener("click", () => selectOffering(offering));
-    list.append(button);
-  }
-}
-
-async function loadOfferings() {
-  const query = beginQuery();
-  state.selected = null;
-  state.offerings = [];
-  notice();
-  $("#offering-count").textContent = "…";
-  $("#offering-list").replaceChildren(empty("正在查询", "正在加载当前授权范围内的开课…"));
-  $("#detail").replaceChildren(empty("选择一条开课", "课程、资源与督导记录会随选择同步更新。"));
-  try {
-    const data = await api("/api/offerings?term_id=" + encodeURIComponent($("#term").value), {signal: query.signal});
-    if (query.epoch !== state.epoch) return;
-    state.offerings = data.items;
-    renderList();
-    if (state.offerings.length) await selectOffering(state.offerings[0]);
-  } catch (error) {
-    if (error.name === "AbortError" || query.epoch !== state.epoch) return;
-    renderList();
-    notice(error.message);
-    const retry = el("button", "retry", "重新查询");
-    retry.addEventListener("click", loadOfferings);
-    $("#offering-list").append(retry);
-  }
-}
-
-async function selectOffering(offering) {
-  const query = beginQuery();
-  state.selected = offering.id;
-  renderList();
-  notice();
-  $("#detail").replaceChildren(empty("正在加载开课", "正在核对课程与开课关系…"));
-  try {
-    const detail = await api(`/api/offerings/${offering.id}?course_id=${offering.course_id}`, {signal: query.signal});
-    if (query.epoch !== state.epoch) return;
-    renderDetail(detail);
-    await loadTab(detail, query);
-  } catch (error) {
-    if (error.name === "AbortError" || query.epoch !== state.epoch) return;
-    $("#detail").replaceChildren(empty("开课暂不可用", error.message));
-  }
-}
-
-function renderDetail(detail) {
-  const root = $("#detail");
-  root.replaceChildren();
-  const head = el("div", "detail-head");
-  head.append(el("p", "eyebrow", `${detail.course.code} / ${detail.id}`), el("h2", "", detail.course.name), el("p", "", detail.term));
-  const meta = el("div", "detail-meta");
-  meta.append(el("span", "", detail.course.department), el("span", "", `${detail.course.credits} 学分`), el("span", "", detail.class_name));
-  head.append(meta);
-  const body = el("div", "detail-body");
-  body.append(el("h3", "section-title", "课程简介"), el("p", "description", detail.course.description || "课程简介未提供。"), el("h3", "section-title", "本次开课安排"));
-  const facts = el("dl", "facts");
-  for (const [label, value] of [["任课教师", detail.teachers.join(" / ")], ["教学班", detail.class_name], ["教学时间", detail.schedule], ["教学地点", detail.room]]) {
-    const fact = el("div");
-    fact.append(el("dt", "", label), el("dd", "", value));
-    facts.append(fact);
-  }
-  body.append(facts);
-  const tabs = el("div", "tabs");
-  tabs.setAttribute("role", "tablist");
-  tabs.setAttribute("aria-label", "关联信息");
-  for (const [id, text] of [["resources", "教学资源"], ["supervision", "督导记录"]]) {
-    const tab = el("button", "tab" + (state.tab === id ? " active" : ""), text);
-    tab.id = "tab-" + id;
-    tab.type = "button";
-    tab.setAttribute("role", "tab");
-    tab.setAttribute("aria-selected", String(state.tab === id));
-    tab.setAttribute("aria-controls", "tab-content");
-    tab.tabIndex = state.tab === id ? 0 : -1;
-    tab.addEventListener("click", () => {
-      state.tab = id;
-      const query = beginQuery();
-      for (const t of tabs.children) {
-        const selected = t === tab;
-        t.classList.toggle("active", selected);
-        t.setAttribute("aria-selected", String(selected));
-        t.tabIndex = selected ? 0 : -1;
-      }
-      loadTab(detail, query);
-    });
-    tab.addEventListener("keydown", (event) => {
-      if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
-      event.preventDefault();
-      const target = event.key === "Home" ? tabs.firstElementChild : event.key === "End" ? tabs.lastElementChild : (tab === tabs.firstElementChild ? tabs.lastElementChild : tabs.firstElementChild);
-      target.click();
-      target.focus();
-    });
-    tabs.append(tab);
-  }
-  const content = el("div", "tab-content");
-  content.id = "tab-content";
-  content.setAttribute("role", "tabpanel");
-  body.append(tabs, content);
-  root.append(head, body);
-}
-
-function link(text, url, className = "") {
-  const a = el("a", className, text);
-  a.href = url;
-  a.target = "_blank";
-  a.rel = "noopener noreferrer";
-  a.setAttribute("aria-label", text + "（新窗口）");
-  return a;
-}
-
-async function loadTab(detail, query) {
-  const content = $("#tab-content");
-  content.setAttribute("aria-labelledby", "tab-" + state.tab);
-  content.replaceChildren(empty("正在加载", "正在查询本次开课的关联信息…"));
-  const tab = state.tab;
-  try {
-    const data = await api(`/api/offerings/${detail.id}/${tab}`, {signal: query.signal});
-    if (query.epoch !== state.epoch) return;
-    content.replaceChildren();
-    if (tab === "resources") {
-      if (!data.items.length) content.append(empty("暂无关联资料", "当前开课尚未登记关联资料；这不表示课程从未建设资源。"));
-      for (const resource of data.items) {
-        const card = el("article", "resource");
-        card.dataset.resource = resource.id;
-        const title = el("div", "resource-title");
-        title.append(el("h4", "", resource.name), el("span", "status " + resource.status, resource.status_label));
-        const foot = el("div", "resource-foot");
-        foot.append(el("small", "", `${resource.id} · ${resource.scope}`));
-        if (resource.url) foot.append(link("打开资料 ↗", resource.url));
-        else foot.append(el("small", "", resource.status_label));
-        card.append(title, el("p", "", resource.description), el("p", "", "来源：" + (resource.source || "未提供")), foot);
-        content.append(card);
-      }
-    } else {
-      content.append(el("div", "data-note", "数据状态：" + data.data_state + "。" + data.notice));
-      if (!data.records.length) content.append(empty("未查询到督导记录", "请结合上方数据状态理解结果，不据此推断从未督导。"));
-      for (const record of data.records) {
-        const card = el("article", "resource");
-        card.dataset.record = record.id;
-        card.append(el("h4", "", `${record.date} · ${record.observer}`), el("p", "", record.summary), el("p", "", `开课 ${record.offering_id} · ${record.id} · 来源：${record.source}`), link("查阅事实来源 ↗", record.source_url, "source-link"));
-        content.append(card);
-      }
-    }
-  } catch (error) {
-    if (error.name === "AbortError" || query.epoch !== state.epoch) return;
-    content.replaceChildren(empty("暂无法查阅", error.message));
-  }
-}
-
-function setScope(user) {
-  $("#scope-title").textContent = user.role === "teacher" ? "仅显示本人承担的开课" : "仅显示计算机系授权开课";
-  $("#scope-detail").textContent = "当前模拟角色：" + roleNames[user.role];
-}
-
-async function switchIdentity() {
-  beginQuery();
-  const identity = $("#identity");
-  identity.disabled = true;
-  $("#term").disabled = true;
-  // 切换身份时立即清掉旧身份数据，失败后也不显示旧内容。
-  state.offerings = [];
-  state.selected = null;
-  renderList();
-  $("#detail").replaceChildren(empty("正在切换模拟身份", "重新核对可见范围…"));
-  try {
-    const data = await api("/api/demo-session", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({user_id: identity.value})});
-    state.user = data.user;
-    setScope(state.user);
-    await loadOfferings();
-  } catch (error) {
-    notice(error.message);
-    $("#detail").replaceChildren(empty("身份切换未完成", "请重新选择模拟身份后重试。"));
-  } finally {
-    identity.disabled = false;
-    $("#term").disabled = false;
-  }
-}
-
-async function init() {
-  try {
-    const data = await api("/api/bootstrap");
-    $("#identity").replaceChildren(...data.users.map((user) => {
-      const option = el("option", "", `${user.name} · ${roleNames[user.role]}`);
-      option.value = user.id;
-      return option;
-    }));
-    $("#term").replaceChildren(...data.terms.map((term) => {
-      const option = el("option", "", term.name);
-      option.value = term.id;
-      return option;
-    }));
-    $("#identity").addEventListener("change", switchIdentity);
-    $("#term").addEventListener("change", loadOfferings);
-    $("#identity").value = data.user ? data.user.id : "teacher-a";
-    await switchIdentity();
-  } catch (error) {
-    notice("无法连接本地服务：" + error.message + " 请检查终端服务是否运行，然后刷新页面。");
-    $("#offering-list").replaceChildren(empty("服务不可用", "启动服务后刷新页面重试。"));
-  }
-}
 init();
+
