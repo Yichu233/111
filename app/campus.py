@@ -45,6 +45,7 @@ def seed():
  return {'as_of':ASOF,'term':'2026—2027学年 秋季学期','term_start':'2026-09-07','mode':'scenario','organization':'软件教学中心（场景组织）','courses':courses,'resources':resources,'tasks':tasks,'followups':[{'id':'FU-01','course_id':'CL-03','title':'补充小组讨论记录方式','description':'根据10月12日听课反馈，在课前材料中明确小组记录模板和汇报规则。','due':'2026-10-19','status':'open','reply':'','created':'2026-10-13'},{'id':'FU-02','course_id':'CL-05','title':'补充路由算法对照表','description':'对照本周教学目标，增加步骤对照和边界案例。','due':'2026-10-16','status':'replied','reply':'已在课前材料中补充对照说明，待主任复核。','created':'2026-10-14'}],'audit':[]}
 @contextmanager
 def connection(server):
+ """在同一SQLite连接中提交场景变更；发生异常时回滚，已有状态不重新播种。"""
  path=Path(server.campus_database);path.parent.mkdir(parents=True,exist_ok=True)
  c=sqlite3.connect(path,timeout=10);c.execute('CREATE TABLE IF NOT EXISTS campus_state (id INTEGER PRIMARY KEY CHECK(id=1), version INTEGER NOT NULL, payload TEXT NOT NULL)')
  c.execute('CREATE TABLE IF NOT EXISTS campus_preferences (user_id TEXT PRIMARY KEY, payload TEXT NOT NULL)')
@@ -59,9 +60,11 @@ def connection(server):
   raise
  finally:c.close()
 def read(server):
+ """同时读取状态版本与业务快照，写入时用版本号识别其他窗口的更新。"""
  with connection(server) as c:v,raw=c.execute('SELECT version,payload FROM campus_state WHERE id=1').fetchone()
  return v,json.loads(raw)
 def account(h):
+ """以服务器保存且未过期的本地场景会话确定身份，不信任请求中的角色声明。"""
  cookies=SimpleCookie()
  try:cookies.load(h.headers.get('Cookie',''))
  except Exception:pass
@@ -70,6 +73,7 @@ def account(h):
  if not session or session[1]<time.time():raise APIError(401,'session_required','请选择场景工作身份。')
  return next(u for u in USERS if u['id']==session[0])
 def visible(data,user):
+ """复制后按任课范围裁剪；草稿及草稿动态只保留给对应督导，避免向其他身份泄露。"""
  d=json.loads(json.dumps(data));cs=[c for c in d['courses'] if user['role']!='teacher' or user['id'] in c['teachers']];ids={c['id'] for c in cs};d['courses']=cs
  d['resources']=[r for r in d['resources'] if r['course_id'] in ids]
  d['tasks']=[t for t in d['tasks'] if t['course_id'] in ids and (user['role']=='director' or (user['role']=='teacher' and t['status']=='submitted') or (user['role']=='supervisor' and t['observer']==user['id']))]
@@ -79,6 +83,7 @@ def visible(data,user):
  d['audit']=[a for a in d['audit'] if a['course_id'] in ids and (a['action']!='保存听课草稿' or a['actor']==user['name'])][-100:]
  return d
 def preferences(server,user):
+ """按场景账号读取偏好；未设置时返回新默认值，避免不同账号共享可变列表。"""
  with connection(server) as c:row=c.execute('SELECT payload FROM campus_preferences WHERE user_id=?',(user['id'],)).fetchone()
  return json.loads(row[0]) if row else {'density':'comfortable','landing':'home','pinned':[],'read_events':[]}
 def get(h,path):
@@ -96,6 +101,7 @@ def text(p,k,minimum=1,maximum=2000):
  if not isinstance(v,str) or not minimum<=len(v.strip())<=maximum:raise APIError(400,'invalid_field',f'{k}内容应为{minimum}—{maximum}个字符。')
  return v.strip()
 def post(h,path):
+ """校验请求、场景权限及流程状态；业务写入在事务中检查版本，防止旧页面覆盖新状态。"""
  origin=h.headers.get('Origin')
  if origin and origin!='http://'+h.headers.get('Host',''):raise APIError(403,'origin_rejected','不接受跨站操作。')
  if h.headers.get('Content-Type','').split(';')[0]!='application/json':raise APIError(415,'invalid_type','需要JSON请求。')
