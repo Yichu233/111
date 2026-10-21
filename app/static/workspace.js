@@ -63,11 +63,11 @@ function inboxPage(){
   if(!events.length)list.append(empty('尚无业务动态','发布资料、保存记录或处理跟进后会产生真实操作记录。'));root.append(list,el('p','footnote','显示当前身份可见课程的最近100条操作。时间为实际操作时间；场景日程仍使用2026-10-15。草稿操作仅本人可见。'));
  }
 }
-function editResource(r){formDialog('编辑课程资料 · '+course(r.course_id).name,[{key:'title',label:'资料标题',value:r.title,min:2,max:80},{key:'body',label:'资料正文',area:true,rows:12,value:r.body,min:20,max:12000}],'resource_update',{course_id:r.course_id,resource_id:r.id},'保存新版本');}
+function editResource(r){formDialog('编辑课程资料 · '+course(r.course_id).name,[{key:'title',label:'资料标题',value:r.title,min:2,max:80},{key:'source',label:'资料来源（可留空）',required:false,max:500,value:r.source||''},{key:'body',label:'资料正文',area:true,rows:12,value:r.body,min:20,max:12000}],'resource_update',{course_id:r.course_id,resource_id:r.id},'保存新版本');}
 function resourceReader(r){
- const body=el('div','reading'),head=el('div','reader-meta'),c=course(r.course_id);head.append(chip(r.kind,'blue'),el('span','muted','第 '+(r.revision||1)+' 版'),el('span','muted',who(r.author)+' / '+(r.updated?r.updated.slice(0,10):r.created)));body.append(head,el('p','reader-course',c.name+' / '+c.class_name),el('pre','document-body',r.body));
+ const body=el('div','reading'),head=el('div','reader-meta'),c=course(r.course_id);head.append(chip(r.kind,'blue'),el('span','muted','第 '+(r.revision||1)+' 版'),el('span','muted',who(r.author)+' / '+(r.updated?r.updated.slice(0,10):r.created)));body.append(head,el('p','reader-course',c.name+' / '+c.class_name),el('p','muted',r.scope_label||'本开课专属'),el('p','resource-source',r.source?'资料来源：'+r.source:'未提供资料来源'),el('pre','document-body',r.body));
  const actions=el('div','form-actions');if(own(c))actions.append(btn('编辑资料',()=>{d.close();editResource(r);},'button primary'));actions.append(a('进入所属课程','course/'+c.id+'/materials','button'));actions.lastChild.addEventListener('click',()=>d.close());body.append(actions);
- if(r.history?.length){const history=el('details','version-history');history.append(el('summary','','历史版本（'+r.history.length+'）'));r.history.slice().reverse().forEach((old,i)=>{const details=el('details','version-entry');details.append(el('summary','',`第 ${old.revision||1} 版 · ${old.title} · ${(old.updated||old.created||'').slice(0,10)}`),el('pre','document-body',old.body));history.append(details);});body.append(history);}
+ if(r.history?.length){const history=el('details','version-history');history.append(el('summary','','历史版本（'+r.history.length+'）'));r.history.slice().reverse().forEach((old,i)=>{const details=el('details','version-entry');details.append(el('summary','',`第 ${old.revision||1} 版 · ${old.title} · ${(old.updated||old.created||'').slice(0,10)}`),el('p','resource-source',old.source?'资料来源：'+old.source:'该历史版本未提供来源记录'),el('pre','document-body',old.body));history.append(details);});body.append(history);}
  const d=modal(r.title,body);
 }
 function guestCatalog(){

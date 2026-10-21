@@ -9,8 +9,7 @@ ROOT=Path(__file__).resolve().parent
 USERS=[{'id':'t1','name':'陈知远','role':'teacher'},{'id':'t2','name':'周宁','role':'teacher'},{'id':'t3','name':'顾思齐','role':'teacher'},{'id':'t4','name':'宋嘉禾','role':'teacher'},{'id':'t5','name':'林悦','role':'teacher'},{'id':'d1','name':'陆明','role':'director'},{'id':'s1','name':'许文清','role':'supervisor'}]
 ASOF='2026-10-15'
 
-def material_body(name,topic,kind):
- content={
+COURSE_CONTENT={
  '软件项目管理':('范围与需求、WBS与进度、成本与质量、风险与沟通、敏捷迭代','以课程查询为例，先写用户目标和验收条件，再将故事拆成可演示的增量。识别数据来源、权限与排期依赖；估算采用区间，并记录假设。','小组从一个故事出发给出任务清单、责任人和完成定义；讨论依赖未满足时如何调整迭代范围。'),
  '软件工程':('软件生命周期、需求规格、结构设计、验证确认、配置管理','对比顺序开发与迭代开发，区分需求变更、设计缺陷与实现缺陷。用需求到测试的追踪表解释为什么每项验收需要证据。','每组使用“问题—证据—建议—负责人”四列表记录讨论结果，下一次课复核采纳情况。'),
  '软件需求分析与设计':('利益相关者、业务场景、用户故事、领域模型、需求验证','从课程检索场景识别角色、前置条件、主路径与例外路径。区分课程和开课单元；将未知数据状态纳入验收条件。','分别编写按课程名检索、无匹配结果、无权读取资料三个场景，不将页面按钮当作用户目标。'),
@@ -22,7 +21,8 @@ def material_body(name,topic,kind):
  '软件体系结构与设计模式':('架构视图、分层结构、质量属性、常用设计模式、架构评估','围绕数据访问与业务逻辑分离讨论职责边界；比较策略模式与简单条件分支在扩展需求下的取舍。','给课程检索功能画出界面、应用服务与数据访问三层依赖，检查是否存在反向依赖。'),
  '程序设计基础':('数据类型、分支循环、函数、数组、文件与模块','将重复计算封装为函数，区分参数、返回值和副作用；使用小输入追踪边界与空集合情形。','将成绩汇总流程拆成读取、校验和统计三个函数；说明空输入不能被直接解释为零分。'),
  '算法分析与设计':('复杂度、分治、贪心、动态规划、图算法','用背包问题说明状态定义、转移方程、初始边界与计算顺序，区分局部选择和全局最优。','手工填写小规模状态表，再分析一维优化时正序与倒序更新的差异。')}
- structure,notes,exercise=content[name]
+def material_body(name,topic,kind):
+ structure,notes,exercise=COURSE_CONTENT[name]
  base='【独立教学场景编写，非学校实际文件】\n课程：'+name+'\n'
  if kind=='教学大纲':return base+'\n课程内容\n'+structure+'。\n\n教学目标\n能够解释关键概念，分析典型问题，并用明确的过程或证据说明结论。\n\n教学组织\n概念讲授、案例分析、独立练习、小组讨论。课堂材料按周维护，反馈由任课教师逐项处理。\n\n本周教学衔接\n'+topic+'。'
  return base+'本周主题：'+topic+'\n\n课前阅读要点\n'+notes+'\n\n课堂练习\n'+exercise+'\n\n学习证据\n保留推导步骤、讨论记录与一个仍待澄清的问题，课堂结束后复核。'
@@ -76,12 +76,29 @@ def visible(data,user):
  """复制后按任课范围裁剪；草稿及草稿动态只保留给对应督导，避免向其他身份泄露。"""
  d=json.loads(json.dumps(data));cs=[c for c in d['courses'] if user['role']!='teacher' or user['id'] in c['teachers']];ids={c['id'] for c in cs};d['courses']=cs
  d['resources']=[r for r in d['resources'] if r['course_id'] in ids]
+ # Reuse existing scenario outlines without inventing official course codes or
+ # altering stored business data when an older database is opened.
+ for course in cs:
+  outline=COURSE_CONTENT.get(course['name'])
+  course['course_information']={'name':course['name'],'code':None,'introduction':outline[0]+'。' if outline else None,'source':'独立教学场景课程说明，非学校官方简介'}
+ for resource in d['resources']:
+  resource['scope']='offering';resource['scope_label']='本开课专属'
+  resource['source']=material_source(resource)
  d['tasks']=[t for t in d['tasks'] if t['course_id'] in ids and (user['role']=='director' or (user['role']=='teacher' and t['status']=='submitted') or (user['role']=='supervisor' and t['observer']==user['id']))]
  for t in d['tasks']:
   if user['role']!='supervisor' and t['status']!='submitted':t['report']={}
  d['followups']=[f for f in d['followups'] if f['course_id'] in ids]
  d['audit']=[a for a in d['audit'] if a['course_id'] in ids and (a['action']!='保存听课草稿' or a['actor']==user['name'])][-100:]
  return d
+def material_source(resource):
+ """Keep provenance separate from author/date; a missing source stays unknown."""
+ if 'source' in resource:return resource['source']
+ return '独立教学场景编写（非学校实际文件）' if resource.get('body','').startswith('【独立教学场景编写，非学校实际文件】') else None
+def source_input(payload):
+ """An optional source is descriptive text only, never a fetched external URL."""
+ value=payload.get('source','')
+ if not isinstance(value,str) or len(value)>500:raise APIError(400,'invalid_source','资料来源应为不超过500个字符的文字。')
+ return value.strip() or None
 def preferences(server,user):
  """按场景账号读取偏好；未设置时返回新默认值，避免不同账号共享可变列表。"""
  with connection(server) as c:row=c.execute('SELECT payload FROM campus_preferences WHERE user_id=?',(user['id'],)).fetchone()
@@ -164,15 +181,17 @@ def post(h,path):
    if not teacher:raise APIError(403,'forbidden','只有本课教师可发布资料。')
    kind=p.get('kind')
    if kind not in ['教学大纲','课前材料','课堂练习']:raise APIError(400,'invalid_kind','资料类型无效。')
-   d['resources'].append({'id':'RS-'+secrets.token_hex(5),'course_id':cid,'title':text(p,'title',2,80),'kind':kind,'body':text(p,'body',20,12000),'created':ASOF,'author':u['id']});label='发布课程资料'
+   d['resources'].append({'id':'RS-'+secrets.token_hex(5),'course_id':cid,'title':text(p,'title',2,80),'kind':kind,'body':text(p,'body',20,12000),'source':source_input(p),'created':ASOF,'author':u['id']});label='发布课程资料'
   elif action=='resource_update':
    if not teacher:raise APIError(403,'forbidden','只有本课教师可修改资料。')
    resource=next((r for r in d['resources'] if r['id']==p.get('resource_id') and r['course_id']==cid),None)
    if not resource:raise APIError(404,'resource_missing','资料不存在或不属于此开课。')
    title=text(p,'title',2,80);body=text(p,'body',20,12000)
-   if title==resource['title'] and body==resource['body']:raise APIError(400,'unchanged','资料内容未发生变化。')
-   resource.setdefault('history',[]).append({k:resource.get(k) for k in ['title','body','author','created','updated','revision']})
-   resource.update(title=title,body=body,author=u['id'],revision=resource.get('revision',1)+1,updated=datetime.now(timezone(timedelta(hours=8))).isoformat(timespec='seconds'))
+   source=source_input(p) if 'source' in p else material_source(resource)
+   if title==resource['title'] and body==resource['body'] and source==material_source(resource):raise APIError(400,'unchanged','资料内容未发生变化。')
+   previous={k:resource.get(k) for k in ['title','body','author','created','updated','revision']};previous['source']=material_source(resource)
+   resource.setdefault('history',[]).append(previous)
+   resource.update(title=title,body=body,source=source,author=u['id'],revision=resource.get('revision',1)+1,updated=datetime.now(timezone(timedelta(hours=8))).isoformat(timespec='seconds'))
    label='更新课程资料'
   elif action=='observation_create':
    if u['role']!='director':raise APIError(403,'forbidden','只有主任可安排听课。')

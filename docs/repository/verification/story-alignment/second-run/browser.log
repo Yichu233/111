@@ -1,0 +1,62 @@
+PASS teacher dashboard has scoped courses and a distinct preparation workflow
+PASS teacher publishes actual reading content then prepares the course with persistence
+PASS director overview reflects published resources and opens a scoped follow-up
+PASS teacher reply and director closure complete the shared lifecycle
+PASS director schedules a real local task that arrives in supervisor workspace
+PASS supervisor validation draft persistence and submission reach teacher feedback
+PASS future observation cannot be submitted even with complete form
+PASS calendar moves between actual scene weeks and deep links survive reload
+PASS scoped search filtering export and keyboard focus work
+PASS real public catalog remains separate and accessible
+PASS all three role routes fit desktop widths without document overflow
+ALL PASS 11
+PASS course query and filter survive detail tabs, selector and return
+PASS calendar week is deep linked and home is always current scene week
+PASS supervisor draft survives course reading, return, reload and role switch
+PASS offline save preserves input and re-enables controls
+PASS stale version refresh keeps draft and allows safe server save
+PASS field validation places keyboard focus on the first incomplete field
+PASS searching a material opens that exact document directly
+PASS dirty modal closure requires explicit discard and preserves input on resume
+PASS director metric links and followup links open the intended subset
+PASS invalid routes and inaccessible records never show unrelated content
+PASS all visible desktop pages have named controls and no horizontal overflow
+ALL PASS 11
+PASS entry portal uses explicit scene identity and opens each matching workspace
+PASS favorites and display preferences persist across reload and remain user scoped
+PASS course switcher keeps scope and source context
+PASS material editing creates a visible revision and preserves the old version
+PASS activity read state is persistent and does not complete business tasks
+PASS integrated public catalog filters paginates and traces sources without leaving shell
+PASS team directory reflects visible assignments and help points to working modules
+PASS logout protects unsaved observation and actually invalidates the session
+PASS portal and every new module fit desktop sizes with keyboard-visible controls
+ALL PASS 9
+PASS guest catalog list, detail, reload, return, and session boundary
+PASS course sorting is chronological, query survives detail and reset restores scope
+PASS material filters combine with course context and expose only own-course create action
+PASS task queue separates today and future based on scene date, preserves URL filter
+PASS calendar due dates follow week navigation and open the exact follow-up
+PASS public catalog returns to the same page and filter instead of resetting
+PASS course source stays in integrated shell and returns to original course context
+PASS record checklist reflects actual text and index filtering retains selection
+PASS follow-up search and phase filter combine without changing records
+PASS preference read failure falls back safely after identity change
+PASS session expiry exposes recovery without discarding supervisor input
+
+locator.waitFor: Timeout 10000ms exceeded.
+Call log:
+[2m  - waiting for locator('.teacher-layout') to be visible[22m
+
+    at C:\Users\HP\Documents\ChatGPT\金融科技项目管理\爱教学_项目仓库\tests\browser_finish.cjs:49:542
+    at async test (C:\Users\HP\Documents\ChatGPT\金融科技项目管理\爱教学_项目仓库\tests\browser_finish.cjs:10:31)
+    at async C:\Users\HP\Documents\ChatGPT\金融科技项目管理\爱教学_项目仓库\tests\browser_finish.cjs:48:3 {
+  log: [ "  - waiting for locator('.teacher-layout') to be visible" ],
+  name: 'TimeoutError'
+}
+Traceback (most recent call last):
+  File "C:\Users\HP\Documents\ChatGPT\金融科技项目管理\爱教学_项目仓库\tests\run_browser_suite.py", line 36, in <module>
+    subprocess.run([node,str(ROOT/'tests'/filename)],cwd=ROOT,env=env,check=True)
+  File "C:\Users\HP\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['C:\\Program Files\\nodejs\\node.EXE', 'C:\\Users\\HP\\Documents\\ChatGPT\\金融科技项目管理\\爱教学_项目仓库\\tests\\browser_finish.cjs']' returned non-zero exit status 1.

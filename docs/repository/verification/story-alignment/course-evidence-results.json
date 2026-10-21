@@ -1,0 +1,12 @@
+{
+  "passed": 6,
+  "checks": [
+    "course introduction is distinct from weekly topic and missing official code stays explicit",
+    "material reader labels existing offering scope and actual scenario provenance",
+    "publishing without provenance retains an explicit unknown source",
+    "editing only the source creates a revision with preserved old provenance",
+    "director and supervisor can read the same metadata without gaining edit permissions",
+    "long provenance is plain text and does not overflow the desktop reader"
+  ],
+  "errors": []
+}

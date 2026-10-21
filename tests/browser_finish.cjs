@@ -7,7 +7,10 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
  async function ready(){await page.waitForFunction(()=>document.querySelector('#page')?.getAttribute('aria-busy')==='false');}
  async function go(route){await page.goto(base+'/#/'+route);await ready();}
  async function role(id){await page.selectOption('#identity',id);await page.waitForFunction(id=>!document.querySelector('#identity').disabled&&document.querySelector('#identity').value===id,id);}
- async function test(name,fn){await fn();checks.push(name);console.log('PASS '+name);}
+ async function test(name,fn){try{await fn();checks.push(name);console.log('PASS '+name);}catch(e){
+  console.error('FAILED '+name,await page.evaluate(()=>({route:location.hash,busy:V.busy,user:V.user,entryRole:W.entryRole,network:document.querySelector('#network').textContent,body:document.querySelector('#page').innerText})));
+  await page.screenshot({path:'artifacts/campus/failed-interaction.png',fullPage:true});throw e;
+ }}
  try{
   await go('portal');await page.getByRole('button',{name:'进入教学工作空间',exact:true}).click();await page.waitForFunction(()=>!document.querySelector('#identity').disabled);await go('home');await page.locator('.teacher-layout').waitFor();
   await test('course sorting is chronological, query survives detail and reset restores scope',async()=>{
@@ -46,7 +49,10 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
    await role('s1');await go('observations/OB-06');await page.getByLabel('教学组织',{exact:true}).fill('需要保留的课堂观察输入，用于会话异常恢复验证。');await page.route('**/api/campus/action',r=>r.fulfill({status:401,contentType:'application/json',body:JSON.stringify({message:'工作身份已失效'})}));await page.getByRole('button',{name:'保存草稿',exact:true}).click();await page.getByRole('button',{name:'重新选择身份'}).waitFor();assert.match(await page.getByLabel('教学组织',{exact:true}).inputValue(),/需要保留/);await page.getByRole('button',{name:'重新选择身份'}).click();await page.locator('.portal-entry').waitFor();await page.unroute('**/api/campus/action');await page.locator('.role-choice[data-role=supervisor]').click();await page.getByRole('button',{name:'进入教学工作空间',exact:true}).click();await page.locator('.supervisor-layout').waitFor();await go('observations/OB-06');assert.match(await page.getByLabel('教学组织',{exact:true}).inputValue(),/需要保留/);
   });
   await test('state failure after session switch cannot show old-role content',async()=>{
-   await page.route('**/api/campus/state',r=>r.fulfill({status:503,contentType:'application/json',body:JSON.stringify({message:'模拟工作区读取失败'})}));await page.selectOption('#identity','d1');await page.locator('.portal-entry').waitFor();assert.equal(await page.locator('.observation-editor,.teacher-layout,.director-layout').count(),0);await page.unroute('**/api/campus/state');await page.locator('.role-choice[data-role=teacher]').click();await page.getByRole('button',{name:'进入教学工作空间',exact:true}).click();await page.locator('.teacher-layout').waitFor();
+   await page.route('**/api/campus/state',r=>r.fulfill({status:503,contentType:'application/json',body:JSON.stringify({message:'模拟工作区读取失败'})}));await page.selectOption('#identity','d1');await page.locator('.portal-entry').waitFor();assert.equal(await page.locator('.observation-editor,.teacher-layout,.director-layout').count(),0);await page.unroute('**/api/campus/state');await page.locator('.role-choice[data-role=teacher]').click();await page.getByRole('button',{name:'进入教学工作空间',exact:true}).click();
+   // Earlier suites intentionally persist the teacher's preferred landing page.
+   await page.waitForFunction(()=>!V.busy&&V.user?.id==='t1'&&location.hash==='#/'+W.prefs.landing);
+   assert.equal(await page.locator('.observation-editor,.director-layout').count(),0);
   });
   await test('short desktop viewport retains service controls and all enhanced pages fit',async()=>{
    for(const width of [1100,1280,1440,1920]){await page.setViewportSize({width,height:720});for(const route of ['home','courses','resources','inbox','calendar','followups','catalog']){await go(route);assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),width+' '+route);const rect=await page.locator('#about').boundingBox();assert(rect&&rect.y+rect.height<=720,'service control visible');}}

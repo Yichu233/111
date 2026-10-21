@@ -1,0 +1,15 @@
+{
+  "passed": true,
+  "scenario_identities": 7,
+  "static_assets": [
+    "/campus.css",
+    "/campus.js",
+    "/workspace.css",
+    "/workspace.js"
+  ],
+  "database_isolated": true,
+  "business_form_submissions": 0,
+  "executed_at": "2026-10-21T10:37:49.288977+00:00",
+  "archive_checked": false
+}
+
