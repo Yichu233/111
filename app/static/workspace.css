@@ -41,3 +41,6 @@ input,select,textarea{border-color:#c6d1e1;border-radius:8px;background:#fff}inp
 
 
 .resource-source,.resource-copy .muted{overflow-wrap:anywhere;}
+
+/* A stable academic context, integrated with the existing desktop workspace. */
+.term-controls{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:14px 20px;margin:0 0 24px;border:1px solid #d9e2ef;background:#f0f4fa;border-radius:12px}.term-controls>div{display:flex;align-items:baseline;gap:16px}.term-controls strong{color:#233e68;font-size:15px}.term-controls .muted{font-size:13px}.term-controls select{min-width:265px;max-width:360px;background:white}.semester-mark strong{font-size:12px;line-height:1.6}.resource-copy .muted{overflow-wrap:anywhere}

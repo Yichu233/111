@@ -4,10 +4,39 @@ from contextlib import contextmanager
 from pathlib import Path
 from datetime import date,datetime,timedelta,timezone
 from http.cookies import SimpleCookie
+from urllib.parse import urlsplit, parse_qs
 from .domain import APIError
 ROOT=Path(__file__).resolve().parent
 USERS=[{'id':'t1','name':'陈知远','role':'teacher'},{'id':'t2','name':'周宁','role':'teacher'},{'id':'t3','name':'顾思齐','role':'teacher'},{'id':'t4','name':'宋嘉禾','role':'teacher'},{'id':'t5','name':'林悦','role':'teacher'},{'id':'d1','name':'陆明','role':'director'},{'id':'s1','name':'许文清','role':'supervisor'}]
 ASOF='2026-10-15'
+DEFAULT_TERM='2026-autumn'
+TERMS=[{'id':'2026-autumn','label':'2026—2027学年 秋季学期','start':'2026-09-07'},
+       {'id':'2026-spring','label':'2025—2026学年 春季学期','start':'2026-03-02'},
+       {'id':'2027-spring','label':'2026—2027学年 春季学期','start':'2027-03-01'}]
+
+def term_for(course):
+ """Old records belong to their original autumn scene; reads never rewrite them."""
+ return course.get('term_id',DEFAULT_TERM)
+
+def selected_term(value=None):
+ value=DEFAULT_TERM if value is None else value
+ if not isinstance(value,str) or not any(t['id']==value for t in TERMS):
+  raise APIError(400,'invalid_term','请选择有效学期。')
+ return value
+
+def resource_applies(resource,course):
+ """A common resource belongs to a stable catalog course within one term."""
+ if resource.get('scope','offering')=='course':
+  return resource.get('catalog_id')==course['catalog_id'] and resource.get('term_id',DEFAULT_TERM)==term_for(course)
+ return resource['course_id']==course['id']
+
+def editable_resource(resource,user,course):
+ return user['role']=='teacher' and user['id'] in course['teachers'] and (resource.get('scope','offering')!='course' or resource['author']==user['id'])
+
+def resource_scope(payload,default='offering'):
+ scope=payload.get('scope',default)
+ if scope not in ('offering','course'):raise APIError(400,'invalid_scope','资料范围应为本开课专属或本学期课程共用。')
+ return scope
 
 COURSE_CONTENT={
  '软件项目管理':('范围与需求、WBS与进度、成本与质量、风险与沟通、敏捷迭代','以课程查询为例，先写用户目标和验收条件，再将故事拆成可演示的增量。识别数据来源、权限与排期依赖；估算采用区间，并记录假设。','小组从一个故事出发给出任务清单、责任人和完成定义；讨论依赖未满足时如何调整迭代范围。'),
@@ -72,17 +101,26 @@ def account(h):
  with h.server.session_lock:session=h.server.campus_sessions.get(token.value if token else '')
  if not session or session[1]<time.time():raise APIError(401,'session_required','请选择场景工作身份。')
  return next(u for u in USERS if u['id']==session[0])
-def visible(data,user):
+def visible(data,user,term_id=None,all_terms=False):
  """复制后按任课范围裁剪；草稿及草稿动态只保留给对应督导，避免向其他身份泄露。"""
- d=json.loads(json.dumps(data));cs=[c for c in d['courses'] if user['role']!='teacher' or user['id'] in c['teachers']];ids={c['id'] for c in cs};d['courses']=cs
- d['resources']=[r for r in d['resources'] if r['course_id'] in ids]
+ term_id=selected_term(term_id);term=next(t for t in TERMS if t['id']==term_id)
+ d=json.loads(json.dumps(data));cs=[c for c in d['courses'] if (all_terms or term_for(c)==term_id) and (user['role']!='teacher' or user['id'] in c['teachers'])];ids={c['id'] for c in cs};d['courses']=cs
+ d.update(term_id=term_id,terms=TERMS,term=term['label'],term_start=term['start'],read_only=term_id!=DEFAULT_TERM)
+ d['resources']=[r for r in d['resources'] if any(resource_applies(r,c) for c in cs)]
  # Reuse existing scenario outlines without inventing official course codes or
  # altering stored business data when an older database is opened.
  for course in cs:
   outline=COURSE_CONTENT.get(course['name'])
   course['course_information']={'name':course['name'],'code':None,'introduction':outline[0]+'。' if outline else None,'source':'独立教学场景课程说明，非学校官方简介'}
  for resource in d['resources']:
-  resource['scope']='offering';resource['scope_label']='本开课专属'
+  applicable=[c for c in cs if resource_applies(resource,c)]
+  resource['scope']=resource.get('scope','offering')
+  resource['scope_label']='本学期课程共用' if resource['scope']=='course' else '本开课专属'
+  resource['offering_ids']=[c['id'] for c in applicable]
+  # Expose only authorized contexts, even when the publishing class is private.
+  context=next((c for c in applicable if c['id']==resource['course_id']),applicable[0])
+  resource['course_id']=context['id']
+  resource['can_edit']=any(editable_resource(resource,user,c) for c in applicable)
   resource['source']=material_source(resource)
  d['tasks']=[t for t in d['tasks'] if t['course_id'] in ids and (user['role']=='director' or (user['role']=='teacher' and t['status']=='submitted') or (user['role']=='supervisor' and t['observer']==user['id']))]
  for t in d['tasks']:
@@ -112,7 +150,10 @@ def get(h,path):
  if path=='/api/campus/preferences':
   h.reply(200,preferences(h.server,u));return
  if path!='/api/campus/state':raise APIError(404,'not_found','接口不存在。')
- version,data=read(h.server);h.reply(200,{'version':version,'user':u,'users':USERS,'data':visible(data,u)})
+ query=parse_qs(urlsplit(h.path).query,keep_blank_values=True)
+ terms=query.get('term_id',[None])
+ if len(terms)!=1:raise APIError(400,'invalid_term','每次只能选择一个学期。')
+ version,data=read(h.server);h.reply(200,{'version':version,'user':u,'users':USERS,'data':visible(data,u,terms[0])})
 def text(p,k,minimum=1,maximum=2000):
  v=p.get(k)
  if not isinstance(v,str) or not minimum<=len(v.strip())<=maximum:raise APIError(400,'invalid_field',f'{k}内容应为{minimum}—{maximum}个字符。')
@@ -153,9 +194,9 @@ def post(h,path):
   if set(p)-{'density','landing','pinned','read_events'}:raise APIError(400,'invalid_preference','包含不支持的设置。')
   if 'density' in p and p['density'] not in ['comfortable','compact']:raise APIError(400,'invalid_preference','显示密度无效。')
   if 'landing' in p and p['landing'] not in ['home','inbox','courses','calendar']:raise APIError(400,'invalid_preference','默认页面无效。')
-  _,data=read(h.server);allowed={x['id'] for x in visible(data,u)['courses']}
+  _,data=read(h.server);allowed={x['id'] for x in visible(data,u,all_terms=True)['courses']}
   if 'pinned' in p and (not isinstance(p['pinned'],list) or len(p['pinned'])>20 or any(not isinstance(x,str) or x not in allowed for x in p['pinned'])):raise APIError(400,'invalid_preference','只能收藏当前身份可见的课程。')
-  audit_ids={a['id'] for a in visible(data,u)['audit']}
+  audit_ids={a['id'] for a in visible(data,u,all_terms=True)['audit']}
   if 'read_events' in p and (not isinstance(p['read_events'],list) or len(p['read_events'])>100 or any(not isinstance(x,str) or x not in audit_ids for x in p['read_events'])):raise APIError(400,'invalid_preference','动态读取标记无效。')
   with connection(h.server) as c:
    c.execute('BEGIN IMMEDIATE');row=c.execute('SELECT payload FROM campus_preferences WHERE user_id=?',(u['id'],)).fetchone()
@@ -171,27 +212,39 @@ def post(h,path):
   if type(p.get('version')) is not int or p['version']!=version:raise APIError(409,'stale_state','资料已被更新，请刷新后重新操作；输入内容仍保留在表单中。')
   action=p.get('action');cid=p.get('course_id');course=next((x for x in d['courses'] if x['id']==cid),None)
   if not course:raise APIError(404,'course_missing','开课单元不存在。')
+  active_term=selected_term(p.get('term_id'))
+  if term_for(course)!=active_term:raise APIError(409,'term_mismatch','开课不属于当前学期，请切换学期后重新操作。')
+  if active_term!=DEFAULT_TERM:raise APIError(403,'term_read_only','此学期仅供查阅，请在当前教学学期办理业务。')
   teacher=u['role']=='teacher' and u['id'] in course['teachers']
   if action=='prepare':
    if not teacher:raise APIError(403,'forbidden','只有本课教师可更新备课状态。')
    if type(p.get('prepared')) is not bool:raise APIError(400,'invalid_field','备课状态无效。')
-   if p['prepared'] and not any(r['course_id']==cid and r['kind']=='课前材料' for r in d['resources']):raise APIError(400,'missing_material','请先补齐课前材料，再确认备课完成。')
+   if p['prepared'] and not any(resource_applies(r,course) and r['kind']=='课前材料' for r in d['resources']):raise APIError(400,'missing_material','请先补齐课前材料，再确认备课完成。')
    course['prepared']=p['prepared'];label='确认备课完成' if p['prepared'] else '重新打开备课'
   elif action=='resource_add':
    if not teacher:raise APIError(403,'forbidden','只有本课教师可发布资料。')
    kind=p.get('kind')
    if kind not in ['教学大纲','课前材料','课堂练习']:raise APIError(400,'invalid_kind','资料类型无效。')
-   d['resources'].append({'id':'RS-'+secrets.token_hex(5),'course_id':cid,'title':text(p,'title',2,80),'kind':kind,'body':text(p,'body',20,12000),'source':source_input(p),'created':ASOF,'author':u['id']});label='发布课程资料'
+   scope=resource_scope(p)
+   d['resources'].append({'id':'RS-'+secrets.token_hex(5),'course_id':cid,'catalog_id':course['catalog_id'],'term_id':active_term,'scope':scope,'title':text(p,'title',2,80),'kind':kind,'body':text(p,'body',20,12000),'source':source_input(p),'created':ASOF,'author':u['id']});label='发布课程资料'
   elif action=='resource_update':
    if not teacher:raise APIError(403,'forbidden','只有本课教师可修改资料。')
-   resource=next((r for r in d['resources'] if r['id']==p.get('resource_id') and r['course_id']==cid),None)
+   resource=next((r for r in d['resources'] if r['id']==p.get('resource_id') and resource_applies(r,course)),None)
    if not resource:raise APIError(404,'resource_missing','资料不存在或不属于此开课。')
+   if not editable_resource(resource,u,course):raise APIError(403,'forbidden','课程共用资料由发布教师维护，其他任课教师可查阅。')
    title=text(p,'title',2,80);body=text(p,'body',20,12000)
    source=source_input(p) if 'source' in p else material_source(resource)
-   if title==resource['title'] and body==resource['body'] and source==material_source(resource):raise APIError(400,'unchanged','资料内容未发生变化。')
+   scope=resource_scope(p,resource.get('scope','offering'))
+   if title==resource['title'] and body==resource['body'] and source==material_source(resource) and scope==resource.get('scope','offering'):raise APIError(400,'unchanged','资料内容未发生变化。')
    previous={k:resource.get(k) for k in ['title','body','author','created','updated','revision']};previous['source']=material_source(resource)
+   previous['scope']=resource.get('scope','offering')
    resource.setdefault('history',[]).append(previous)
-   resource.update(title=title,body=body,source=source,author=u['id'],revision=resource.get('revision',1)+1,updated=datetime.now(timezone(timedelta(hours=8))).isoformat(timespec='seconds'))
+   resource.update(title=title,body=body,source=source,scope=scope,course_id=cid,catalog_id=course['catalog_id'],term_id=active_term,author=u['id'],revision=resource.get('revision',1)+1,updated=datetime.now(timezone(timedelta(hours=8))).isoformat(timespec='seconds'))
+   if previous['scope']=='course' and scope=='offering':
+    # Narrowing a shared resource can remove the last preparation material from
+    # another class. Reopen its preparation rather than retain a false success.
+    for item in d['courses']:
+     if term_for(item)==active_term and item['catalog_id']==course['catalog_id'] and not any(resource_applies(r,item) and r['kind']=='课前材料' for r in d['resources']):item['prepared']=False
    label='更新课程资料'
   elif action=='observation_create':
    if u['role']!='director':raise APIError(403,'forbidden','只有主任可安排听课。')
@@ -231,4 +284,4 @@ def post(h,path):
   else:raise APIError(400,'invalid_action','不支持此操作。')
   d['audit'].append({'id':secrets.token_hex(6),'course_id':cid,'actor':u['name'],'action':label,'at':datetime.now(timezone(timedelta(hours=8))).isoformat(timespec='seconds')})
   c.execute('UPDATE campus_state SET version=?,payload=? WHERE id=1',(version+1,json.dumps(d,ensure_ascii=False)))
- h.reply(200,{'version':version+1,'data':visible(d,u),'user':u,'users':USERS})
+ h.reply(200,{'version':version+1,'data':visible(d,u,active_term),'user':u,'users':USERS})
