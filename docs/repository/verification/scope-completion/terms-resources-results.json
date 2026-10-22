@@ -1,0 +1,13 @@
+{
+  "passed": 7,
+  "checks": [
+    "term selector clears empty results and survives reload for each role",
+    "failed term request restores the original context",
+    "publisher can create shared material through the actual form",
+    "second class can read shared material and keeps its own return context",
+    "director and supervisor read shared materials without edit privileges",
+    "scope narrowing preserves history and removes material from another class",
+    "term control and materials fit desktop layouts"
+  ],
+  "errors": []
+}

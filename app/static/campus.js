@@ -70,9 +70,9 @@ async function changeUser(id){
   if(switched){V.data=null;V.user=null;history.replaceState(null,'','#/portal');render();}
   else if(V.user)$('#identity').value=V.user.id;
   toast(e.message);$('#network').textContent=e.message;
- }finally{V.busy=false;$('#identity').disabled=!V.user;}
+ }finally{V.busy=false;$('#identity').disabled=!V.user;syncTermControl();}
 }
-async function mutate(action,params){if(V.busy)throw new Error('正在切换教学上下文，请稍候。');if(V.writing)throw new Error('上一项操作正在保存，请稍候。');V.writing=true;try{const d=await request('action',{action,version:V.version,term_id:V.term,...params});apply(d);render();return d;}finally{V.writing=false;$('#identity').disabled=!!V.busy;}}
+async function mutate(action,params){if(V.busy)throw new Error('正在切换教学上下文，请稍候。');if(V.writing)throw new Error('上一项操作正在保存，请稍候。');V.writing=true;try{const d=await request('action',{action,version:V.version,term_id:V.term,...params});apply(d);render();return d;}finally{V.writing=false;$('#identity').disabled=!!V.busy;syncTermControl();}}
 function nav(){workspaceNav();}
 
 function termline(){const n=el('div','term-line');n.append(chip(V.term==='2026-autumn'?'第6教学周':'学期资料','blue'),el('span','',V.data.term),el('span','scene-date','场景日期 2026.10.15 · 星期四'));return n;}
@@ -154,7 +154,7 @@ function resourceHub(){
  tools.append(field('查找资料',q),field('所属开课',select('所属课程',[['all','全部可见课程'],...V.data.courses.map(c=>[c.id,c.name+' / '+c.class_name])],chosen,v=>{chosen=v;setParam('course',v);draw();})),field('资料类型',select('资料类型',[['all','全部类型'],['教学大纲','教学大纲'],['课前材料','课前材料'],['课堂练习','课堂练习']],kind,v=>{kind=v;setParam('kind',v);draw();})),field('排列方式',select('资料排序',[['recent','最近更新'],['name','资料名称']],order,v=>{order=v;setParam('sort',v);draw();})),btn('清除筛选',()=>go('resources')));root.append(tools,out);
  function draw(){const rows=V.data.resources.filter(r=>(chosen==='all'||(r.offering_ids||[r.course_id]).includes(chosen))&&(kind==='all'||r.kind===kind)&&(r.title+' '+course(r.course_id).name).toLowerCase().includes(q.value.trim().toLowerCase())).sort((a,b)=>order==='name'?a.title.localeCompare(b.title,'zh-CN'):String(b.updated||b.created).localeCompare(String(a.updated||a.created)));
   const head=section(rows.length+' 份资料');if(chosen!=='all'&&course(chosen)&&own(course(chosen)))head.append(btn('登记课程资料',()=>resourceForm(course(chosen)),'button primary'));out.replaceChildren(head);
-  const list=el('div','document-list');for(const r of rows){const row=resourceRow(r),ctx=a(course(r.course_id).name+' / '+course(r.course_id).class_name,'course/'+r.course_id+'/materials','resource-context');row.querySelector('.resource-copy').append(ctx);row.querySelector('.resource-copy p').textContent=r.kind+' / '+who(r.author)+' / 更新 '+String(r.updated||r.created).replace('T',' ').slice(0,16)+' / v'+(r.revision||1);list.append(row);}out.append(list);
+  const list=el('div','document-list');for(const r of rows){const context=chosen!=='all'?chosen:r.course_id,row=resourceRow(r),ctx=a(course(context).name+' / '+course(context).class_name,'course/'+context+'/materials','resource-context');row.querySelector('.resource-copy').append(ctx);row.querySelector('.resource-copy p').textContent=r.kind+' / '+who(r.author)+' / 更新 '+String(r.updated||r.created).replace('T',' ').slice(0,16)+' / v'+(r.revision||1);list.append(row);}out.append(list);
   if(!rows.length)out.append(empty('没有匹配资料','更换类型或课程筛选；选定自己的课程后可登记资料。'));
  }draw();
 }
@@ -273,6 +273,7 @@ function courseActions(c){const n=el('div','course-actions');if(V.data.read_only
 
 // A term belongs to a browser tab, not a shared server session. Delayed refreshes
 // cannot replace a newer term, and a failed switch restores the previous context.
+function syncTermControl(){const picker=document.querySelector('[aria-label="选择教学学期"]');if(picker)picker.disabled=!!V.busy||!!V.writing;}
 function termControls(){
  const wrap=el('section','term-controls'),copy=el('div');wrap.setAttribute('aria-label','学期上下文');
  copy.append(el('strong','','教学学期'),el('span','muted',V.data.read_only?'历史与后续学期仅供查阅':'课程、资料、任务按所选学期同步'));

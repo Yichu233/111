@@ -1,0 +1,17 @@
+{
+  "passed": 11,
+  "checks": [
+    "teacher dashboard has scoped courses and a distinct preparation workflow",
+    "teacher publishes actual reading content then prepares the course with persistence",
+    "director overview reflects published resources and opens a scoped follow-up",
+    "teacher reply and director closure complete the shared lifecycle",
+    "director schedules a real local task that arrives in supervisor workspace",
+    "supervisor validation draft persistence and submission reach teacher feedback",
+    "future observation cannot be submitted even with complete form",
+    "calendar moves between actual scene weeks and deep links survive reload",
+    "scoped search filtering export and keyboard focus work",
+    "real public catalog remains separate and accessible",
+    "all three role routes fit desktop widths without document overflow"
+  ],
+  "errors": []
+}
